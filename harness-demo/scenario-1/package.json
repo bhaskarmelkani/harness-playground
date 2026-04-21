@@ -1,0 +1,16 @@
+{
+  "name": "acme-dashboard-api",
+  "version": "2.1.4",
+  "description": "Internal dashboard API for ACME Corp",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
