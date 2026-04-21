@@ -1,14 +1,11 @@
-const levels = { info: "INFO", warn: "WARN", error: "ERROR" };
+const LEVELS = { info: "INFO", warn: "WARN", error: "ERROR" };
 
 function log(level, message) {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] [${levels[level]}] ${message}`);
+  process.stdout.write(`[${new Date().toISOString()}] [${LEVELS[level]}] ${message}\n`);
 }
 
-const logger = {
-  info: (msg) => log("info", msg),
-  warn: (msg) => log("warn", msg),
-  error: (msg) => log("error", msg),
+module.exports = {
+  info:  (m) => log("info",  m),
+  warn:  (m) => log("warn",  m),
+  error: (m) => log("error", m),
 };
-
-module.exports = logger;

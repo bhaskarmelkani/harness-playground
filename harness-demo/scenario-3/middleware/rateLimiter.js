@@ -1,28 +1,19 @@
-const requestCounts = {};
+const counts = {};
 
 function rateLimiter(req, res, next) {
-  const ip = req.ip || req.connection.remoteAddress;
+  const key = req.ip || "unknown";
   const now = Date.now();
-  const windowMs = 60 * 1000;
-  const max = 100;
+  const window = 60_000;
+  const limit = 120;
 
-  if (!requestCounts[ip]) {
-    requestCounts[ip] = { count: 1, start: now };
+  if (!counts[key] || now - counts[key].start > window) {
+    counts[key] = { n: 1, start: now };
     return next();
   }
-
-  const record = requestCounts[ip];
-  if (now - record.start > windowMs) {
-    record.count = 1;
-    record.start = now;
-    return next();
-  }
-
-  if (record.count >= max) {
+  if (counts[key].n >= limit) {
     return res.status(429).json({ error: "Too many requests" });
   }
-
-  record.count++;
+  counts[key].n++;
   next();
 }
 

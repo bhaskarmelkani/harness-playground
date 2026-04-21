@@ -1,14 +1,20 @@
-const appConfig = require("./app");
+const config = require("./app");
+
+let connected = false;
 
 async function connectDB() {
-  const { host, port, name } = appConfig.db;
-  console.log(`Connecting to database ${name} at ${host}:${port}`);
-  return Promise.resolve();
+  const { host, port, name } = config.db;
+  console.log(`[db] connecting to ${name} @ ${host}:${port}`);
+  connected = true;
 }
 
 async function disconnectDB() {
-  console.log("Disconnecting from database");
-  return Promise.resolve();
+  connected = false;
+  console.log("[db] disconnected");
 }
 
-module.exports = { connectDB, disconnectDB };
+function isConnected() {
+  return connected;
+}
+
+module.exports = { connectDB, disconnectDB, isConnected };

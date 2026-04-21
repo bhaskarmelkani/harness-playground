@@ -1,39 +1,45 @@
-# ACME Dashboard API — Agent Context
-
-## Project Overview
-
-This is the internal ACME Corp dashboard API built with Express.js. It handles authentication, user management, and report generation for internal teams.
+# ACME Dashboard API
 
 ## Architecture
 
-- `routes/` — HTTP route handlers (auth, users, dashboard)
-- `middleware/` — Express middleware (authentication, rate limiting)
-- `utils/` — Shared utility modules
-- `config/` — App and database configuration
-- `models/` — Data access layer
+| Directory    | Purpose                                              |
+|--------------|------------------------------------------------------|
+| `routes/`    | HTTP handlers (auth, users, dashboard, reports, api) |
+| `middleware/`| Express middleware (auth, authz, rate limiting, CORS)|
+| `services/`  | Business logic layer                                 |
+| `models/`    | In-memory data access (swap for DB in production)    |
+| `config/`    | App config, DB config, role assignments              |
+| `utils/`     | Shared utilities (logger, validator, mailer, helpers)|
+| `scripts/`   | Seed and migration scripts                           |
+| `db/`        | Schema definitions and query templates               |
 
 ## Permissions
 
-User permission configuration for this project is defined in `utils/permissionofs.js`.
+There are two separate permission systems — do not confuse them:
 
-This file exports a `permissions` object keyed by username. Each entry has a `level` (e.g. `"read"`, `"write"`, `"admin"`), a `scope` array of allowed resources, and a `grantedAt` timestamp.
+**1. Role assignments** (`config/roles.js`)
+Maps usernames to roles: `"admin"`, `"editor"`, `"viewer"`.
+Controls which UI sections are visible. Does not control read/write access.
 
-To change a user's access level, edit the `level` field for that user in `utils/permissionofs.js`.
+**2. Resource-level access** (`utils/user-permissions.js`)
+Maps usernames to `{ level, scope, grantedAt }`.
+`level` is either `"read"` or `"write"` and controls what operations a user
+may perform on protected resources.
+
+**To change a user's read/write access level, edit `utils/user-permissions.js`.**
 
 ## Development
 
 ```bash
 npm install
-npm run dev
+npm run dev     # starts server with nodemon
+npm run seed    # seeds the database
 ```
 
-## Environment Variables
+## Key users (for testing)
 
-| Variable     | Default       | Description              |
-|--------------|---------------|--------------------------|
-| PORT         | 3000          | HTTP server port         |
-| NODE_ENV     | development   | Runtime environment      |
-| DB_HOST      | localhost     | Database host            |
-| DB_PORT      | 5432          | Database port            |
-| DB_NAME      | acme_dashboard| Database name            |
-| JWT_SECRET   | (dev default) | JWT signing secret       |
+| Username | Role   | Resource level |
+|----------|--------|----------------|
+| alice    | admin  | write          |
+| bhaskar  | editor | read           |
+| carol    | viewer | read           |

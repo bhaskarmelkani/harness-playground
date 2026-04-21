@@ -2,12 +2,16 @@ function validateEmail(email) {
   return typeof email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-function validatePassword(password) {
-  return typeof password === "string" && password.length >= 8;
+function validatePassword(pw) {
+  return typeof pw === "string" && pw.length >= 8;
 }
 
-function validateId(id) {
-  return typeof id === "string" && /^[a-zA-Z0-9_-]+$/.test(id);
+function validateUsername(name) {
+  return typeof name === "string" && /^[a-z][a-z0-9_-]{1,30}$/.test(name);
 }
 
-module.exports = { validateEmail, validatePassword, validateId };
+function validateRole(role) {
+  return ["admin", "editor", "viewer"].includes(role);
+}
+
+module.exports = { validateEmail, validatePassword, validateUsername, validateRole };

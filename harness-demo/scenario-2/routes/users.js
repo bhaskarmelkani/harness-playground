@@ -1,29 +1,26 @@
 const express = require("express");
 const router = express.Router();
-const User = require("../models/user");
-const logger = require("../utils/logger");
+const { listUsers, getUserProfile, updateUserRole } = require("../services/userService");
+const { authorize } = require("../middleware/authorize");
 
-router.get("/", async (req, res) => {
-  const users = await User.findAll();
+// GET /users — list all users with their roles
+router.get("/", authorize("read"), async (req, res) => {
+  const users = await listUsers();
   res.json(users);
 });
 
-router.get("/:id", async (req, res) => {
-  const user = await User.findById(req.params.id);
-  if (!user) return res.status(404).json({ error: "User not found" });
-  res.json(user);
+// GET /users/:username — profile for a specific user (e.g. /users/bhaskar)
+router.get("/:username", authorize("read"), async (req, res) => {
+  const profile = await getUserProfile(req.params.username);
+  if (!profile) return res.status(404).json({ error: "User not found" });
+  res.json(profile);
 });
 
-router.put("/:id", async (req, res) => {
-  const updated = await User.update(req.params.id, req.body);
-  logger.info(`User ${req.params.id} updated`);
-  res.json(updated);
-});
-
-router.delete("/:id", async (req, res) => {
-  await User.delete(req.params.id);
-  logger.info(`User ${req.params.id} deleted`);
-  res.status(204).send();
+// PUT /users/:username/role — change role (admin only)
+router.put("/:username/role", authorize("write"), async (req, res) => {
+  const { role } = req.body;
+  const result = await updateUserRole(req.params.username, role);
+  res.json(result);
 });
 
 module.exports = router;

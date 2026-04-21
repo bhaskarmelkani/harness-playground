@@ -10,103 +10,97 @@ usage() {
   echo "  --verify   Check if bhaskar's permission was changed to 'write'"
   echo ""
   echo "Examples:"
-  echo "  $0 1           # Show scenario 1 context and task"
-  echo "  $0 2 --verify  # Check if scenario 2 was completed"
+  echo "  $0 1           # Show scenario 1 setup"
+  echo "  $0 1 --verify  # Check if scenario 1 was completed"
   exit 1
 }
 
-if [[ $# -lt 1 ]]; then usage; fi
+[[ $# -lt 1 ]] && usage
 
 SCENARIO="$1"
 VERIFY=false
-if [[ "${2:-}" == "--verify" ]]; then VERIFY=true; fi
+[[ "${2:-}" == "--verify" ]] && VERIFY=true
 
 case "$SCENARIO" in
   1)
-    SCENARIO_DIR="$SCRIPT_DIR/scenario-1"
-    TARGET_FILE="utils/jkjkjkjfk.js"
-    DESCRIPTION="No CLAUDE.md. Target file has a cryptic name: jkjkjkjfk.js"
-    EXPECTED_DIFFICULTY="Hard — agent must search all files to find the permission config"
+    DIR="$SCRIPT_DIR/scenario-1"
+    TARGET="utils/cfg_res_acl.js"
+    HAS_CLAUDE="No"
+    FRICTION="High — 'bhaskar' appears in 6 files; target filename gives no hint"
     ;;
   2)
-    SCENARIO_DIR="$SCRIPT_DIR/scenario-2"
-    TARGET_FILE="utils/permissionofs.js"
-    DESCRIPTION="No CLAUDE.md. Target file has a descriptive name: permissionofs.js"
-    EXPECTED_DIFFICULTY="Medium — agent can find the file via semantic search on the filename"
+    DIR="$SCRIPT_DIR/scenario-2"
+    TARGET="utils/user-permissions.js"
+    HAS_CLAUDE="No"
+    FRICTION="Medium — filename 'user-permissions.js' is a strong glob target"
     ;;
   3)
-    SCENARIO_DIR="$SCRIPT_DIR/scenario-3"
-    TARGET_FILE="utils/permissionofs.js"
-    DESCRIPTION="CLAUDE.md present with explicit pointer to utils/permissionofs.js"
-    EXPECTED_DIFFICULTY="Easy — agent reads CLAUDE.md first and goes straight to the file"
+    DIR="$SCRIPT_DIR/scenario-3"
+    TARGET="utils/user-permissions.js"
+    HAS_CLAUDE="Yes"
+    FRICTION="Low — CLAUDE.md names the exact file in its Permissions section"
     ;;
   *)
-    echo "Error: scenario must be 1, 2, or 3"
-    usage
-    ;;
+    echo "Error: scenario must be 1, 2, or 3"; usage ;;
 esac
 
-if [[ ! -d "$SCENARIO_DIR" ]]; then
-  echo "Error: scenario directory not found: $SCENARIO_DIR"
-  exit 1
-fi
+[[ ! -d "$DIR" ]] && { echo "Error: $DIR not found"; exit 1; }
 
+# ── verify mode ────────────────────────────────────────────────────────────────
 if $VERIFY; then
   echo "=== Verifying scenario $SCENARIO ==="
-  echo ""
-  FULL_PATH="$SCENARIO_DIR/$TARGET_FILE"
-  if [[ ! -f "$FULL_PATH" ]]; then
-    echo "FAIL: Target file not found: $FULL_PATH"
-    exit 1
-  fi
-  if grep -q '"write"' "$FULL_PATH"; then
-    echo "PASS: bhaskar's permission is set to \"write\""
+  FULL="$DIR/$TARGET"
+  [[ ! -f "$FULL" ]] && { echo "FAIL: $FULL not found"; exit 1; }
+  if grep -q '"write"' "$FULL" && grep -q 'bhaskar' "$FULL"; then
+    echo "PASS: bhaskar's level is set to \"write\""
     echo ""
-    echo "Current content of $TARGET_FILE:"
-    cat "$FULL_PATH"
+    grep -A1 'bhaskar' "$FULL"
   else
-    echo "FAIL: Permission has not been changed to \"write\""
+    echo "FAIL: permission not changed to \"write\""
     echo ""
-    echo "Current content of $TARGET_FILE:"
-    cat "$FULL_PATH"
+    cat "$FULL"
     exit 1
   fi
   exit 0
 fi
 
-echo "============================================"
-echo " HARNESS DEMO — Scenario $SCENARIO"
-echo "============================================"
-echo ""
-echo "Description : $DESCRIPTION"
-echo "Difficulty  : $EXPECTED_DIFFICULTY"
-echo "Target file : $TARGET_FILE"
+# ── info mode ──────────────────────────────────────────────────────────────────
+cat <<EOF
+════════════════════════════════════════════════════
+ HARNESS DEMO — Scenario $SCENARIO
+════════════════════════════════════════════════════
+ Target file : $TARGET
+ CLAUDE.md   : $HAS_CLAUDE
+ Friction    : $FRICTION
+
+EOF
+
+echo "── Files in this project ──"
+find "$DIR" -type f | sed "s|$DIR/||" | sort
 echo ""
 
-echo "--- Context available to the agent ---"
-if [[ -f "$SCENARIO_DIR/CLAUDE.md" ]]; then
-  echo "CLAUDE.md: PRESENT"
+echo "── Where 'bhaskar' appears ──"
+grep -rl "bhaskar" "$DIR" | sed "s|$DIR/||" | sort
+echo ""
+
+echo "── Task prompt (paste into the agent) ──"
+cat "$DIR/TASK.md"
+echo ""
+
+echo "── Current state of $TARGET ──"
+cat "$DIR/$TARGET"
+echo ""
+
+if [[ "$HAS_CLAUDE" == "Yes" ]]; then
+  echo "── CLAUDE.md (what the agent sees on startup) ──"
+  cat "$DIR/CLAUDE.md"
   echo ""
-  echo "Contents:"
-  echo "----------"
-  cat "$SCENARIO_DIR/CLAUDE.md"
-  echo "----------"
-else
-  echo "CLAUDE.md: NOT PRESENT"
 fi
-echo ""
 
-echo "--- Task prompt (paste this into the agent) ---"
-cat "$SCENARIO_DIR/TASK.md"
+echo "── To run ──"
+REL=$(python3 -c "import os,sys; print(os.path.relpath(sys.argv[1], os.getcwd()))" "$DIR" 2>/dev/null || echo "$DIR")
+echo "  cd $REL"
+echo "  opencode   # paste the task prompt above"
 echo ""
-
-echo "--- Current state of target file ($TARGET_FILE) ---"
-cat "$SCENARIO_DIR/$TARGET_FILE"
-echo ""
-
-echo "--- How to run ---"
-echo "  cd $(realpath --relative-to="$PWD" "$SCENARIO_DIR" 2>/dev/null || echo "$SCENARIO_DIR")"
-echo "  opencode   # then paste the task prompt above"
-echo ""
-echo "  After the agent finishes, verify with:"
-echo "  $0 $SCENARIO --verify"
+echo "  Then verify:"
+echo "  $(basename "$0") $SCENARIO --verify"

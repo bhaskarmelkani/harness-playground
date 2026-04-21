@@ -1,21 +1,15 @@
 const express = require("express");
 const router = express.Router();
-const Report = require("../models/report");
+const { authorize } = require("../middleware/authorize");
 const logger = require("../utils/logger");
 
-router.get("/", (req, res) => {
+router.get("/", authorize("read"), (req, res) => {
+  logger.info(`Dashboard accessed by ${req.user.name}`);
   res.json({ status: "ok", user: req.user });
 });
 
-router.get("/reports", async (req, res) => {
-  const reports = await Report.findByUser(req.user.id);
-  logger.info(`Reports fetched for user ${req.user.id}`);
-  res.json(reports);
-});
-
-router.get("/stats", async (req, res) => {
-  const stats = await Report.getStats(req.user.id);
-  res.json(stats);
+router.get("/summary", authorize("read"), (req, res) => {
+  res.json({ widgets: ["activity", "reports", "users"], user: req.user.name });
 });
 
 module.exports = router;

@@ -1,26 +1,15 @@
-const express = require("express");
-const authRoutes = require("./routes/auth");
-const userRoutes = require("./routes/users");
-const dashboardRoutes = require("./routes/dashboard");
-const authenticate = require("./middleware/authenticate");
-const rateLimiter = require("./middleware/rateLimiter");
-const logger = require("./utils/logger");
+const app = require("./app");
 const { connectDB } = require("./config/database");
-const appConfig = require("./config/app");
+const config = require("./config/app");
+const logger = require("./utils/logger");
 
-const app = express();
-
-app.use(express.json());
-app.use(rateLimiter);
-
-app.use("/auth", authRoutes);
-app.use("/users", authenticate, userRoutes);
-app.use("/dashboard", authenticate, dashboardRoutes);
-
-connectDB().then(() => {
-  app.listen(appConfig.port, () => {
-    logger.info(`Server running on port ${appConfig.port}`);
+connectDB()
+  .then(() => {
+    app.listen(config.port, () => {
+      logger.info(`Server listening on port ${config.port}`);
+    });
+  })
+  .catch((err) => {
+    logger.error(`Startup failed: ${err.message}`);
+    process.exit(1);
   });
-});
-
-module.exports = app;
