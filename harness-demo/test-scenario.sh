@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 usage() {
   echo "Usage: $0 <scenario> [--verify]"
   echo ""
-  echo "  scenario   1, 2, or 3"
+  echo "  scenario   1, 2, 3, or 4"
   echo "  --verify   Check if bhaskar's permission was changed to 'write'"
   echo ""
   echo "Examples:"
@@ -43,8 +43,15 @@ case "$SCENARIO" in
     STORY="CLAUDE.md names the exact file in its Permissions section."
     EXPECTED="2–3 tool calls — agent reads CLAUDE.md and goes straight to the file"
     ;;
+  4)
+    DIR="$SCRIPT_DIR/scenario-4"
+    TARGET="utils/cfg_res_acl.js"
+    HAS_CLAUDE="Yes (documents the tool, not the file)"
+    STORY="Same messy codebase as scenario 1. CLAUDE.md says: use tools/find-permission.js."
+    EXPECTED="3–4 tool calls — agent runs the skill, gets exact file+value, edits it"
+    ;;
   *)
-    echo "Error: scenario must be 1, 2, or 3"; usage ;;
+    echo "Error: scenario must be 1, 2, 3, or 4"; usage ;;
 esac
 
 [[ ! -d "$DIR" ]] && { echo "Error: $DIR not found"; exit 1; }
@@ -107,9 +114,15 @@ echo "── Current state of $TARGET ──"
 cat "$DIR/$TARGET"
 echo ""
 
-if [[ "$HAS_CLAUDE" == "Yes" ]]; then
+if [[ -f "$DIR/CLAUDE.md" ]]; then
   echo "── CLAUDE.md ──"
   cat "$DIR/CLAUDE.md"
+  echo ""
+fi
+
+if [[ -f "$DIR/tools/find-permission.js" ]]; then
+  echo "── Skill output: node tools/find-permission.js bhaskar ──"
+  (cd "$DIR" && node tools/find-permission.js bhaskar)
   echo ""
 fi
 

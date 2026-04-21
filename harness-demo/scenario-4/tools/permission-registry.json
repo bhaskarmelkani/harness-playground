@@ -1,0 +1,10 @@
+{
+  "sourceOfTruth": "utils/cfg_res_acl.js",
+  "description": "Resource-level access configuration for production",
+  "otherFiles": {
+    "utils/permissions-snapshot.js": "auto-generated cache — rebuilt on restart, do not edit",
+    "utils/permissions-legacy.js":   "deprecated v1 format — kept for legacy API clients only",
+    "config/access-defaults.js":     "provisioning defaults — production reads from sourceOfTruth",
+    "config/env-overrides.js":       "non-production environment overrides only"
+  }
+}

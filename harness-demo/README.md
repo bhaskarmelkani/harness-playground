@@ -1,11 +1,11 @@
 # harness-demo
 
-Three identical tasks. Same agent. Dramatically different number of tool calls.
-The only variable is how much **context** the codebase provides.
+Four identical tasks. Same agent. Dramatically different number of tool calls.
+The only variable is how much **context** the codebase provides — and what form that context takes.
 
 ---
 
-## The task (same in all three scenarios)
+## The task (same in all four scenarios)
 
 ```
 Change bhaskar's permission level from "read" to "write" in this project.
@@ -13,24 +13,26 @@ Change bhaskar's permission level from "read" to "write" in this project.
 
 ---
 
-## How the scenarios differ
+## The four scenarios
 
 ### Scenario 1 — No context, maximum ambiguity
 
-The target file (`utils/cfg_res_acl.js`) has a cryptic name. Worse, there are
-**4 decoy files** that all look like permission configs and all contain
-`bhaskar` with a `level` field:
+The target file (`utils/cfg_res_acl.js`) has a cryptic name. There are also
+**4 decoy files** that all look like permission configs and all contain `bhaskar`
+with a `level` field:
 
 | File | What it is |
 |------|-----------|
-| `config/access-defaults.js` | Looks like a user access config |
-| `config/env-overrides.js` | Has `bhaskar: { level: "write" }` — for staging only |
-| `utils/permissions-snapshot.js` | Cached copy — do not edit |
-| `utils/permissions-legacy.js` | v1 format — deprecated |
-| `utils/cfg_res_acl.js` | **← the real one** |
+| `config/access-defaults.js` | Provisioning defaults — not the live config |
+| `config/env-overrides.js` | `bhaskar: { level: "write" }` — staging env only |
+| `utils/permissions-snapshot.js` | Auto-generated cache — do not edit directly |
+| `utils/permissions-legacy.js` | Deprecated v1 format — legacy API only |
+| `utils/cfg_res_acl.js` | **← the production source of truth** |
 
-The agent greps for "bhaskar", gets **13 matches across 13 files**.
-It must open and evaluate 4–5 config files before identifying the source of truth.
+Even `glob **/*permission*` misleads: it returns the snapshot and legacy files — not the target.
+
+The agent greps for "bhaskar", gets 13 hits across 13 files, and must open and
+evaluate 4–5 configs before finding the right one.
 
 **Expected: 10–14 tool calls**
 
@@ -38,35 +40,53 @@ It must open and evaluate 4–5 config files before identifying the source of tr
 
 ### Scenario 2 — No context, one clearly-named file
 
-Same core project. The 4 decoy permission files are gone. The target is called
-`utils/user-permissions.js`.
+Same core project. The 4 decoy files are gone. The target is `utils/user-permissions.js`.
 
-When the agent greps for "bhaskar" + "level", only one file matches.
-When it globs `**/*permission*`, one file appears.
+`glob **/*permission*` → 1 file → the target, immediately.
 
 **Expected: 3–5 tool calls**
 
 ---
 
-### Scenario 3 — CLAUDE.md names the exact file
+### Scenario 3 — CLAUDE.md points directly to the file
 
-Same as scenario 2, but `CLAUDE.md` has a `## Permissions` section that says:
-
-> *The source of truth for per-user read/write access is `utils/user-permissions.js`.*
-
-The agent reads `CLAUDE.md` on startup and opens the file directly — no search phase at all.
+Same as scenario 2, plus `CLAUDE.md` explicitly names `utils/user-permissions.js`
+as the permission source of truth. The agent reads it on startup and goes straight there.
 
 **Expected: 2–3 tool calls**
+
+---
+
+### Scenario 4 — Custom skill on a messy codebase
+
+**Same messy codebase as scenario 1** (all 4 decoys, cryptic filename) — but with
+`tools/find-permission.js`, a project-specific helper script.
+
+`CLAUDE.md` tells the agent: "use `node tools/find-permission.js <username>` — don't search manually."
+
+The agent runs the skill, gets back:
+
+```
+Permission config for: bhaskar
+  File  : utils/cfg_res_acl.js
+  Level : "read"
+  ...
+To update, edit the "level" field for "bhaskar" in: utils/cfg_res_acl.js
+```
+
+It then makes the edit. The 4 decoy files are irrelevant — the tool already knows which file is the source of truth via `tools/permission-registry.json`.
+
+**Expected: 3–4 tool calls** — on the identical messy codebase that took 10–14 in scenario 1.
 
 ---
 
 ## What to observe
 
 ```
-Scenario 1   grep → 13 hits → open access-defaults.js → wrong
-                             → open env-overrides.js  → wrong (staging only)
+Scenario 1   grep → 13 hits → open access-defaults.js  → wrong (provisioning only)
+                             → open env-overrides.js   → wrong (staging only)
                              → open permissions-snapshot.js → wrong (cached)
-                             → open permissions-legacy.js → wrong (v1 format)
+                             → open permissions-legacy.js   → wrong (v1 format)
                              → open cfg_res_acl.js → ✓ edit
              ≈ 10–14 tool calls
 
@@ -75,32 +95,32 @@ Scenario 2   glob **/*permission* → 1 hit → open user-permissions.js → ✓
 
 Scenario 3   read CLAUDE.md → open user-permissions.js → ✓ edit
              ≈ 2–3 tool calls
+
+Scenario 4   read CLAUDE.md → run tools/find-permission.js bhaskar
+                             → told: utils/cfg_res_acl.js, level "read"
+                             → edit cfg_res_acl.js → ✓
+             ≈ 3–4 tool calls  (on scenario 1's codebase)
 ```
 
 ---
 
 ## How to run
 
-### Prerequisites
-
-[opencode](https://opencode.ai) or any AI coding agent that reads `CLAUDE.md` on startup.
-
-### Steps
-
 ```bash
-# Preview what the agent faces
+# Preview what the agent faces in each scenario
 ./test-scenario.sh 1
+./test-scenario.sh 4
 
 # Run the agent
 cd scenario-1
 opencode
-# paste: Change bhaskar's permission level from "read" to "write" in this project.
+# paste the task prompt
 
 # Verify
 cd ..
 ./test-scenario.sh 1 --verify
 
-# Repeat for 2 and 3
+# Repeat for 2, 3, 4
 ```
 
 ---
@@ -108,37 +128,44 @@ cd ..
 ## Key insights
 
 **1. File naming is a search index.**
-An agent looking for "permissions" will glob `**/*permission*` and land in the right
-file in scenario 2 without reading any content. In scenario 1, every plausible name
-is equally cryptic — it has to open files to tell them apart.
+`glob **/*permission*` returns the target immediately in scenario 2 and nothing useful in scenario 1.
+Good names aren't just readable — they're machine-searchable.
 
-**2. Multiple plausible candidates cost real time.**
-Decoy files aren't just noise — they're *decision points*. The agent must read
-each one, determine it's wrong, and continue. Four decoys = four extra round trips.
+**2. Multiple plausible candidates each cost a round trip.**
+Decoy files force the agent to read, evaluate, and discard. Four decoys ≈ four extra tool calls.
+The problem isn't that the agent is slow — it's that it has no way to skip steps it doesn't know are wrong.
 
-**3. CLAUDE.md eliminates the discovery phase entirely.**
-Scenario 3's agent doesn't grep, doesn't glob, doesn't evaluate candidates.
-It reads the map you gave it and goes straight to work. The difference isn't
-intelligence — it's information.
+**3. CLAUDE.md eliminates the discovery phase.**
+The agent doesn't search at all in scenario 3. It reads the map you gave it and goes to work.
+The cost of writing one good CLAUDE.md is paid back on every task the agent ever runs in this repo.
+
+**4. A skill can substitute for a clean codebase.**
+Scenario 4 has the same mess as scenario 1, but the agent achieves scenario 3 efficiency.
+A well-written tool encodes the knowledge a senior engineer would share on day one:
+"don't look at the snapshot or the legacy file — use `cfg_res_acl.js`."
+The skill does the disambiguation so the agent doesn't have to.
 
 ---
 
-## Project structure (per scenario)
+## Project structure
 
 ```
-scenario-X/
-├── CLAUDE.md          # scenario 3 only — explicit file pointer
-├── TASK.md            # task prompt to paste into the agent
-├── app.js / index.js / package.json
-├── routes/            # auth, users, dashboard, reports, admin, api
-├── middleware/        # authenticate, authorize, rateLimiter, cors, errorHandler
-├── services/          # authService, userService, reportService, notificationService
-├── models/            # user, report, session, audit
-├── config/            # app, database, roles, features
-│                      # + access-defaults.js, env-overrides.js  (scenario 1 only)
-├── utils/             # logger, validator, helpers, mailer
-│                      # + permissions-snapshot.js, permissions-legacy.js  (scenario 1 only)
-│                      # + cfg_res_acl.js (s1) or user-permissions.js (s2, s3)  ← TARGET
-├── scripts/           # seed, migrate
-└── db/                # schema, queries
+scenario-1/  scenario-4/          ← messy: 4 decoys + cryptic target
+├── config/
+│   ├── access-defaults.js        ← DECOY (provisioning defaults)
+│   └── env-overrides.js          ← DECOY (staging overrides, bhaskar has "write")
+├── utils/
+│   ├── cfg_res_acl.js            ← TARGET (hard to find by name)
+│   ├── permissions-snapshot.js   ← DECOY (cached copy)
+│   └── permissions-legacy.js     ← DECOY (deprecated v1 format)
+└── tools/                        ← scenario-4 only
+    ├── find-permission.js        ← skill: looks up the source of truth for any user
+    └── permission-registry.json  ← registry: records which file is production
+
+scenario-2/  scenario-3/          ← clean: no decoys, semantic target name
+└── utils/
+    └── user-permissions.js       ← TARGET (findable by glob in one step)
+
+scenario-3/  scenario-4/          ← have CLAUDE.md
+└── CLAUDE.md                     ← s3: points to the file  |  s4: documents the tool
 ```
