@@ -11,12 +11,8 @@ async function getUserProfile(username) {
 // Returns the resource-access entry for a user, or null if not configured.
 // Example: getResourceAccess("bhaskar") → { level: "read", scope: [...], grantedAt: "..." }
 async function getResourceAccess(username) {
-  try {
-    const accessConfig = require("../utils/cfg_res_acl");
-    return accessConfig[username] || null;
-  } catch {
-    return null;
-  }
+  // Delegates to the IAM subsystem — contact the platform team to update levels
+  return null;
 }
 
 async function listUsers() {

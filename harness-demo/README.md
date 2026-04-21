@@ -1,10 +1,11 @@
 # harness-demo
 
-A concrete demonstration of how **context engineering** affects AI coding agent efficiency. Each scenario asks the agent to do the same one-line task on the same codebase. The only variable is what context is available.
+Three identical tasks. Same agent. Dramatically different number of tool calls.
+The only variable is how much **context** the codebase provides.
 
 ---
 
-## The task
+## The task (same in all three scenarios)
 
 ```
 Change bhaskar's permission level from "read" to "write" in this project.
@@ -12,74 +13,69 @@ Change bhaskar's permission level from "read" to "write" in this project.
 
 ---
 
-## Why agents struggle without context
+## How the scenarios differ
 
-This project is designed to be realistic, not trivial:
+### Scenario 1 — No context, maximum ambiguity
 
-- **35 files** across `routes/`, `middleware/`, `services/`, `models/`, `config/`, `utils/`, `scripts/`, `db/`
-- **"bhaskar" appears in 6 files**: `models/user.js`, `config/roles.js`, `middleware/authenticate.js`, `models/audit.js`, `scripts/seed.js`, and the target file
-- **Two decoy permission-like configs** that look plausible but are wrong:
-  - `config/roles.js` — maps users to role names (`"editor"`, `"admin"`) — not the read/write level
-  - `middleware/authorize.js` — has `read: true/false` per role, but no per-user config
+The target file (`utils/cfg_res_acl.js`) has a cryptic name. Worse, there are
+**4 decoy files** that all look like permission configs and all contain
+`bhaskar` with a `level` field:
 
-Without knowing where to look, an agent has to grep for "bhaskar", get 6 hits, open them one by one, and figure out which one controls resource-level access.
+| File | What it is |
+|------|-----------|
+| `config/access-defaults.js` | Looks like a user access config |
+| `config/env-overrides.js` | Has `bhaskar: { level: "write" }` — for staging only |
+| `utils/permissions-snapshot.js` | Cached copy — do not edit |
+| `utils/permissions-legacy.js` | v1 format — deprecated |
+| `utils/cfg_res_acl.js` | **← the real one** |
 
----
+The agent greps for "bhaskar", gets **13 matches across 13 files**.
+It must open and evaluate 4–5 config files before identifying the source of truth.
 
-## The three scenarios
-
-### Scenario 1 — cryptic filename, no CLAUDE.md
-
-```
-scenario-1/utils/cfg_res_acl.js   ← target (no semantic signal in name)
-```
-
-The agent must:
-1. Glob all files (35)
-2. Search for "bhaskar" — 6 files match
-3. Open `models/user.js` — just a user list, not the config
-4. Open `config/roles.js` — has `bhaskar: "editor"`, looks relevant, but it's roles not levels
-5. Open `middleware/authenticate.js` — bhaskar in a comment, not the config
-6. Open `services/userService.js` — JSDoc mentions bhaskar, contains a reference to the target
-7. Follow the `require` to `utils/cfg_res_acl.js` — finally found it
-8. Make the edit
-
-**Expected tool calls: 8–12**
+**Expected: 10–14 tool calls**
 
 ---
 
-### Scenario 2 — descriptive filename, no CLAUDE.md
+### Scenario 2 — No context, one clearly-named file
 
-```
-scenario-2/utils/user-permissions.js   ← target (filename is a strong hint)
-```
+Same core project. The 4 decoy permission files are gone. The target is called
+`utils/user-permissions.js`.
 
-The agent can short-circuit:
-1. Glob `**/*permission*` or `**/*perm*` → 1 match
-2. Open it — correct file immediately
-3. Make the edit
+When the agent greps for "bhaskar" + "level", only one file matches.
+When it globs `**/*permission*`, one file appears.
 
-Or if the agent still greps for "bhaskar" first, it gets 6 hits — but `user-permissions.js` stands out immediately among them.
-
-**Expected tool calls: 3–5**
+**Expected: 3–5 tool calls**
 
 ---
 
-### Scenario 3 — CLAUDE.md with explicit pointer
+### Scenario 3 — CLAUDE.md names the exact file
+
+Same as scenario 2, but `CLAUDE.md` has a `## Permissions` section that says:
+
+> *The source of truth for per-user read/write access is `utils/user-permissions.js`.*
+
+The agent reads `CLAUDE.md` on startup and opens the file directly — no search phase at all.
+
+**Expected: 2–3 tool calls**
+
+---
+
+## What to observe
 
 ```
-scenario-3/CLAUDE.md              ← read on startup
-scenario-3/utils/user-permissions.js   ← target (named explicitly in CLAUDE.md)
+Scenario 1   grep → 13 hits → open access-defaults.js → wrong
+                             → open env-overrides.js  → wrong (staging only)
+                             → open permissions-snapshot.js → wrong (cached)
+                             → open permissions-legacy.js → wrong (v1 format)
+                             → open cfg_res_acl.js → ✓ edit
+             ≈ 10–14 tool calls
+
+Scenario 2   glob **/*permission* → 1 hit → open user-permissions.js → ✓ edit
+             ≈ 3–5 tool calls
+
+Scenario 3   read CLAUDE.md → open user-permissions.js → ✓ edit
+             ≈ 2–3 tool calls
 ```
-
-CLAUDE.md has a `## Permissions` section that explicitly names `utils/user-permissions.js` and says: *"To change a user's read/write access level, edit `utils/user-permissions.js`."*
-
-The agent:
-1. Reads CLAUDE.md — knows exactly where to look
-2. Opens `utils/user-permissions.js`
-3. Makes the edit
-
-**Expected tool calls: 2–3**
 
 ---
 
@@ -87,20 +83,20 @@ The agent:
 
 ### Prerequisites
 
-- [opencode](https://opencode.ai) or another AI coding agent that reads `CLAUDE.md` on startup
+[opencode](https://opencode.ai) or any AI coding agent that reads `CLAUDE.md` on startup.
 
 ### Steps
 
 ```bash
-# 1. Preview the scenario (see what the agent will face)
+# Preview what the agent faces
 ./test-scenario.sh 1
 
-# 2. Run the agent
+# Run the agent
 cd scenario-1
 opencode
 # paste: Change bhaskar's permission level from "read" to "write" in this project.
 
-# 3. Verify the result
+# Verify
 cd ..
 ./test-scenario.sh 1 --verify
 
@@ -109,23 +105,40 @@ cd ..
 
 ---
 
-## What to observe
+## Key insights
 
-| Metric | Scenario 1 | Scenario 2 | Scenario 3 |
-|--------|-----------|-----------|-----------|
-| Tool calls to find file | 5–8 | 1–2 | 0 (told directly) |
-| Files opened before edit | 4–6 | 1 | 1 |
-| Total tool calls | 8–12 | 3–5 | 2–3 |
+**1. File naming is a search index.**
+An agent looking for "permissions" will glob `**/*permission*` and land in the right
+file in scenario 2 without reading any content. In scenario 1, every plausible name
+is equally cryptic — it has to open files to tell them apart.
+
+**2. Multiple plausible candidates cost real time.**
+Decoy files aren't just noise — they're *decision points*. The agent must read
+each one, determine it's wrong, and continue. Four decoys = four extra round trips.
+
+**3. CLAUDE.md eliminates the discovery phase entirely.**
+Scenario 3's agent doesn't grep, doesn't glob, doesn't evaluate candidates.
+It reads the map you gave it and goes straight to work. The difference isn't
+intelligence — it's information.
 
 ---
 
-## Key insights
+## Project structure (per scenario)
 
-**1. Filename quality acts as a semantic search index.**
-An agent looking for "permission" will glob `**/*permission*` and land immediately in scenario 2. It has to read 5 files before finding the same data in scenario 1.
-
-**2. CLAUDE.md eliminates the discovery phase entirely.**
-In scenario 3, the agent doesn't search at all — it reads the map you gave it and goes straight to work. CLAUDE.md is the equivalent of a senior engineer saying "that config you need is in `utils/user-permissions.js`" before the agent even starts.
-
-**3. The agent's capability is identical across all three scenarios.**
-The gap is not intelligence — it's information. Context engineering is about giving the agent the same information a human teammate would have on day one.
+```
+scenario-X/
+├── CLAUDE.md          # scenario 3 only — explicit file pointer
+├── TASK.md            # task prompt to paste into the agent
+├── app.js / index.js / package.json
+├── routes/            # auth, users, dashboard, reports, admin, api
+├── middleware/        # authenticate, authorize, rateLimiter, cors, errorHandler
+├── services/          # authService, userService, reportService, notificationService
+├── models/            # user, report, session, audit
+├── config/            # app, database, roles, features
+│                      # + access-defaults.js, env-overrides.js  (scenario 1 only)
+├── utils/             # logger, validator, helpers, mailer
+│                      # + permissions-snapshot.js, permissions-legacy.js  (scenario 1 only)
+│                      # + cfg_res_acl.js (s1) or user-permissions.js (s2, s3)  ← TARGET
+├── scripts/           # seed, migrate
+└── db/                # schema, queries
+```

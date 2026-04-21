@@ -1,5 +1,6 @@
-// Resource-level access configuration.
-// Controls what operations each user may perform on protected resources.
+// Resource-level access configuration — source of truth for production.
+// Other files (permissions-snapshot.js, access-defaults.js) derive from this.
+// Do not edit the snapshot or defaults directly.
 const resourceAccess = {
   alice: {
     level: "write",
