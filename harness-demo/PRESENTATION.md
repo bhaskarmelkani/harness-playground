@@ -105,8 +105,14 @@ they fit as we go.
 **Setup before the talk** (do this off-stage):
 ```bash
 cd /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo
-./reset.sh        # restores bhaskar → "read" in all scenarios
+node tools/demo.mjs init
+node tools/demo.mjs serve
 ```
+
+Open two browser tabs:
+
+- `http://localhost:4177/presentation`
+- `http://localhost:4177/results`
 
 Every demo pastes the **same prompt**. The only thing that changes between runs is
 the harness. To preview what the agent faces in any scenario:
@@ -121,8 +127,10 @@ the harness. To preview what the agent faces in any scenario:
 ### Exercise A — Scenario 1: no context, maximum ambiguity (lever: *none*)
 
 ```bash
+node /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/tools/demo.mjs stage 1
 cd scenario-1 && opencode
 # paste: Change bhaskar's permission level from "read" to "write" in this project.
+node /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/tools/demo.mjs verify 1
 ```
 - **The repo:** cryptic target filename (`utils/cfg_res_acl.js`) + **4 decoy files**
   that all contain `bhaskar` and a `level` field.
@@ -136,8 +144,10 @@ cd scenario-1 && opencode
 ### Exercise B — Scenario 2: one good filename (lever: *naming*)
 
 ```bash
+node /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/tools/demo.mjs stage 2
 cd ../scenario-2 && opencode
 # paste the same prompt
+node /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/tools/demo.mjs verify 2
 ```
 - **Only change vs s1:** decoys gone, target renamed to `utils/user-permissions.js`.
 - **What to watch:** `glob **/*permission*` returns exactly one file. Read → edit.
@@ -147,8 +157,10 @@ cd ../scenario-2 && opencode
 ### Exercise C — Scenario 4: custom tool on the messy repo (lever: *skills/tools*)
 
 ```bash
+node /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/tools/demo.mjs stage 4
 cd ../scenario-4 && opencode
 # paste the same prompt
+node /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/tools/demo.mjs verify 4
 ```
 - **The repo is identical to scenario 1** — same cryptic name, same 4 decoys.
 - **The difference:** a `CLAUDE.md` (a doc!) that says *don't grep — run
@@ -173,10 +185,12 @@ Don't ask the audience to take the demos on faith. Run the eval:
 
 ```bash
 cd /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground
-node harness-demo/tools/session-table.mjs
+node harness-demo/tools/demo.mjs score
 ```
 
-It parses the recorded sessions and produces:
+The live results tab updates as each `verify` command runs. The recorded eval still
+comes from `session-table.mjs`, and the scoreboard shows those numbers beside the
+live status:
 
 | scenario | lever added | total tool calls | correct file? | notes |
 |---|---|---|---|---|
@@ -202,6 +216,13 @@ node harness-demo/tools/session-table.mjs --details      # show the search queri
 node harness-demo/tools/session-table.mjs --format json  # machine-readable
 ```
 
+If the live agent runs are taking too long, load the recorded outcomes into the
+scoreboard and continue the talk:
+
+```bash
+node harness-demo/tools/demo.mjs recorded
+```
+
 ---
 
 ## Section 5 — Close: where you encode the harness (2 min)
@@ -222,12 +243,12 @@ node harness-demo/tools/session-table.mjs --format json  # machine-readable
 
 **Reset between dry runs:**
 ```bash
-cd harness-demo && ./reset.sh
+cd harness-demo && node tools/demo.mjs init
 ```
 
 **Verify a scenario landed correctly (if running live):**
 ```bash
-./test-scenario.sh 1 --verify   # PASS only if the *right* file now says "write"
+node tools/demo.mjs verify 1   # PASS only if the *right* file now says "write"
 ```
 
 **Numbers to memorize:** 9 (wrong) → 6 → 2 → 3 (right, on the messy repo).

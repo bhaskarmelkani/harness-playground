@@ -34,7 +34,7 @@ Even `glob **/*permission*` misleads: it returns the snapshot and legacy files �
 The agent greps for "bhaskar", gets 13 hits across 13 files, and must open and
 evaluate 4–5 configs before finding the right one.
 
-**Expected: 10–14 tool calls**
+**Expected: ~9–14 tool calls** (recorded run: **9**, and it edited the *wrong* file)
 
 ---
 
@@ -44,7 +44,7 @@ Same core project. The 4 decoy files are gone. The target is `utils/user-permiss
 
 `glob **/*permission*` → 1 file → the target, immediately.
 
-**Expected: 3–5 tool calls**
+**Expected: ~3–6 tool calls** (recorded run: **6**)
 
 ---
 
@@ -53,7 +53,7 @@ Same core project. The 4 decoy files are gone. The target is `utils/user-permiss
 Same as scenario 2, plus `CLAUDE.md` explicitly names `utils/user-permissions.js`
 as the permission source of truth. The agent reads it on startup and goes straight there.
 
-**Expected: 2–3 tool calls**
+**Expected: 2–3 tool calls** (recorded run: **2**)
 
 ---
 
@@ -76,7 +76,7 @@ To update, edit the "level" field for "bhaskar" in: utils/cfg_res_acl.js
 
 It then makes the edit. The 4 decoy files are irrelevant — the tool already knows which file is the source of truth via `tools/permission-registry.json`.
 
-**Expected: 3–4 tool calls** — on the identical messy codebase that took 10–14 in scenario 1.
+**Expected: 3–4 tool calls** (recorded run: **3**) — on the identical messy codebase that took 9 (and a wrong edit) in scenario 1.
 
 ---
 
@@ -88,10 +88,10 @@ Scenario 1   grep → 13 hits → open access-defaults.js  → wrong (provisioni
                              → open permissions-snapshot.js → wrong (cached)
                              → open permissions-legacy.js   → wrong (v1 format)
                              → open cfg_res_acl.js → ✓ edit
-             ≈ 10–14 tool calls
+             ≈ 9–14 tool calls   (recorded run: 9, wrong file)
 
 Scenario 2   glob **/*permission* → 1 hit → open user-permissions.js → ✓ edit
-             ≈ 3–5 tool calls
+             ≈ 3–6 tool calls    (recorded run: 6)
 
 Scenario 3   read CLAUDE.md → open user-permissions.js → ✓ edit
              ≈ 2–3 tool calls
@@ -107,20 +107,46 @@ Scenario 4   read CLAUDE.md → run tools/find-permission.js bhaskar
 ## How to run
 
 ```bash
-# Preview what the agent faces in each scenario
-./test-scenario.sh 1
-./test-scenario.sh 4
+# Start a clean rehearsal and create the live scoreboard state
+node tools/demo.mjs init
+
+# Serve the browser deck and live results page
+node tools/demo.mjs serve
+```
+
+Open:
+
+- `http://localhost:4177/presentation`
+- `http://localhost:4177/results`
+
+For each live run, use the same loop:
+
+```bash
+# Stage the scenario so the results tab shows what is running
+node tools/demo.mjs stage 1
 
 # Run the agent
-cd scenario-1
-opencode
-# paste the task prompt
+cd scenario-1 && opencode
+# paste: Change bhaskar's permission level from "read" to "write" in this project.
 
-# Verify
-cd ..
-./test-scenario.sh 1 --verify
+# Verify and update the live scoreboard
+node ../tools/demo.mjs verify 1
+```
 
-# Repeat for 2, 3, 4
+Repeat with scenarios 2 and 4 for the main talk. Scenario 3 is useful as a
+supporting docs-only comparison.
+
+If the live run timing gets risky, fill the scoreboard from the recorded sessions:
+
+```bash
+node tools/demo.mjs recorded
+```
+
+The older preview command is still useful during rehearsal:
+
+```bash
+./test-scenario.sh 1
+./test-scenario.sh 4
 ```
 
 ---

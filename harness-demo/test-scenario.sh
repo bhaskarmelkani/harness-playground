@@ -27,28 +27,28 @@ case "$SCENARIO" in
     TARGET="utils/cfg_res_acl.js"
     HAS_CLAUDE="No"
     STORY="No context. Cryptic target name. 4 decoy permission files all containing bhaskar+level."
-    EXPECTED="10–14 tool calls — agent opens multiple plausible files before finding the right one"
+    EXPECTED="~9–14 tool calls (recorded run: 9) — opens multiple plausible files; the recorded run edited the WRONG one"
     ;;
   2)
     DIR="$SCRIPT_DIR/scenario-2"
     TARGET="utils/user-permissions.js"
     HAS_CLAUDE="No"
     STORY="No context. No decoys. Target filename is self-documenting."
-    EXPECTED="3–5 tool calls — agent finds it via filename glob or immediately in grep results"
+    EXPECTED="~3–6 tool calls (recorded run: 6) — agent finds it via filename glob or immediately in grep results"
     ;;
   3)
     DIR="$SCRIPT_DIR/scenario-3"
     TARGET="utils/user-permissions.js"
     HAS_CLAUDE="Yes"
     STORY="CLAUDE.md names the exact file in its Permissions section."
-    EXPECTED="2–3 tool calls — agent reads CLAUDE.md and goes straight to the file"
+    EXPECTED="2–3 tool calls (recorded run: 2) — agent reads CLAUDE.md and goes straight to the file"
     ;;
   4)
     DIR="$SCRIPT_DIR/scenario-4"
     TARGET="utils/cfg_res_acl.js"
     HAS_CLAUDE="Yes (documents the tool, not the file)"
     STORY="Same messy codebase as scenario 1. CLAUDE.md says: use tools/find-permission.js."
-    EXPECTED="3–4 tool calls — agent runs the skill, gets exact file+value, edits it"
+    EXPECTED="3–4 tool calls (recorded run: 3) — agent runs the skill, gets exact file+value, edits it"
     ;;
   *)
     echo "Error: scenario must be 1, 2, 3, or 4"; usage ;;
@@ -61,14 +61,15 @@ if $VERIFY; then
   echo "=== Verifying scenario $SCENARIO ==="
   FULL="$DIR/$TARGET"
   [[ ! -f "$FULL" ]] && { echo "FAIL: $FULL not found"; exit 1; }
-  if grep -q '"write"' "$FULL" && grep -q 'bhaskar' "$FULL"; then
-    echo "PASS: bhaskar's level is now \"write\""
+  LEVEL=$(python3 -c "import re, sys; text = open(sys.argv[1]).read(); match = re.search(r'bhaskar\\s*:\\s*\\{[^}]*?level\\s*:\\s*\"([^\"]+)\"', text, re.S); print(match.group(1) if match else '')" "$FULL")
+  if [[ "$LEVEL" == "write" ]]; then
+    echo "PASS: bhaskar's level is now \"write\" in the production target"
     echo ""
-    grep -B1 -A4 'bhaskar' "$FULL" | head -10
+    python3 -c "import re, sys; text = open(sys.argv[1]).read(); match = re.search(r'bhaskar\\s*:\\s*\\{[^}]*?\\}', text, re.S); print(match.group(0) if match else text)" "$FULL"
   else
-    echo "FAIL: permission not changed to \"write\""
+    echo "FAIL: bhaskar's production level is \"${LEVEL:-missing}\", not \"write\""
     echo ""
-    cat "$FULL"
+    python3 -c "import re, sys; text = open(sys.argv[1]).read(); match = re.search(r'bhaskar\\s*:\\s*\\{[^}]*?\\}', text, re.S); print(match.group(0) if match else text)" "$FULL"
     exit 1
   fi
   exit 0
@@ -128,5 +129,5 @@ fi
 
 REL=$(python3 -c "import os,sys; print(os.path.relpath(sys.argv[1], os.getcwd()))" "$DIR" 2>/dev/null || echo "$DIR")
 echo "── To run ──"
-echo "  cd $REL && opencode"
-echo "  Then verify: $(basename "$0") $SCENARIO --verify"
+echo "  cd $REL && opencode --model github-copilot/claude-haiku-4.5"
+echo "  Then verify (updates the live scoreboard): node tools/demo.mjs verify $SCENARIO"

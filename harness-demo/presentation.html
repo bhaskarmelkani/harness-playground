@@ -6,69 +6,174 @@
 <title>The Harness Around the Model</title>
 <style>
   :root{
-    --bg:#0d1117; --panel:#161b22; --line:#30363d;
-    --fg:#e6edf3; --dim:#8b949e; --accent:#58a6ff; --good:#3fb950; --bad:#f85149;
-    --cmd:#0b1f17; --cmdline:#1f6f43;
+    --background:#f5f6fb;
+    --foreground:#0b1220;
+    --card:#ffffff;
+    --muted:#eef1f8;
+    --muted-foreground:#5b6678;
+    --border:#e6e8f3;
+    --primary:#4f46e5;
+    --primary-strong:#4338ca;
+    --primary-soft:#eef2ff;
+    --accent:#0ea5b7;
+    --success:#15803d;
+    --success-bg:#dcfce7;
+    --success-border:#bbf7d0;
+    --danger:#e11d48;
+    --danger-bg:#ffe4e6;
+    --danger-border:#fecdd3;
+    --warning:#b45309;
+    --warning-bg:#fef3c7;
+    --warning-border:#fde68a;
+    --code-bg:#f7f8fd;
+    --code-border:#e0e4f5;
+    --shadow:0 1px 2px rgba(11,18,32,.04), 0 14px 30px rgba(11,18,32,.06), 0 40px 80px rgba(11,18,32,.06);
+    --radius:20px;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;}
-  #deck{height:100vh;width:100vw;overflow:hidden;position:relative}
+  html,body{margin:0;height:100%;color:var(--foreground);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+    background:
+      radial-gradient(900px 520px at 12% -8%, rgba(79,70,229,.10), transparent 60%),
+      radial-gradient(820px 480px at 100% 0%, rgba(14,165,183,.08), transparent 55%),
+      radial-gradient(circle at 1px 1px, rgba(11,18,32,.04) 1px, transparent 0) 0 0/22px 22px,
+      var(--background);}
+  body{overflow:hidden}
+  #deck{height:100vh;width:100vw;overflow:hidden;position:relative;padding:82px 28px 84px}
   .slide{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;
-    padding:5vh 8vw;animation:fade .35s ease}
+    margin:82px 28px 84px;padding:clamp(34px,5.4vh,68px) clamp(40px,6vw,92px);
+    border:1px solid var(--border);border-radius:var(--radius);
+    background:linear-gradient(180deg,rgba(255,255,255,.97),rgba(255,255,255,.9));
+    box-shadow:var(--shadow);overflow:hidden;animation:fade .34s cubic-bezier(.22,.61,.36,1)}
+  .slide::before{content:"";position:absolute;left:0;top:0;right:0;height:4px;
+    background:linear-gradient(90deg,var(--primary),var(--accent));z-index:2}
   .slide.active{display:flex}
-  @keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-  h1{font-size:clamp(34px,5vw,68px);line-height:1.05;margin:0 0 .3em;font-weight:800;letter-spacing:-.02em}
-  h2{font-size:clamp(26px,3.4vw,46px);margin:0 0 .5em;font-weight:700;letter-spacing:-.01em}
-  h3{font-size:clamp(18px,1.8vw,26px);margin:0 0 .4em;color:var(--accent);font-weight:600}
-  p,li{font-size:clamp(16px,1.7vw,24px);line-height:1.5;color:var(--fg)}
-  .dim{color:var(--dim)}
-  .accent{color:var(--accent)}
-  .good{color:var(--good)} .bad{color:var(--bad)}
-  ul{margin:.2em 0 0;padding-left:1.1em} li{margin:.35em 0}
-  .kicker{color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.12em;
-    font-size:clamp(12px,1.1vw,15px);margin-bottom:1em}
-  .big{font-size:clamp(22px,2.6vw,38px);font-weight:600;line-height:1.35}
+  @keyframes fade{from{opacity:0;transform:translateY(14px) scale(.995)}to{opacity:1;transform:none}}
+  .slide::after{content:"";position:absolute;right:clamp(26px,4vw,64px);bottom:clamp(22px,4vh,54px);
+    width:clamp(70px,9vw,128px);height:clamp(70px,9vw,128px);border-radius:999px;
+    background:radial-gradient(circle at 35% 35%,rgba(79,70,229,.16),rgba(14,165,183,.05) 70%,transparent);
+    filter:blur(2px);pointer-events:none;z-index:0}
+  .slide>*{position:relative;z-index:1}
+  h1{font-size:clamp(42px,6vw,84px);line-height:1.0;margin:0 0 .28em;font-weight:850;letter-spacing:-.022em;color:var(--foreground)}
+  h2{font-size:clamp(32px,4.1vw,58px);line-height:1.06;margin:0 0 .45em;font-weight:830;letter-spacing:-.018em;color:var(--foreground)}
+  h3{font-size:clamp(18px,1.6vw,25px);margin:0 0 .45em;color:var(--primary-strong);font-weight:780;letter-spacing:-.01em}
+  p,li{font-size:clamp(17px,1.55vw,24px);line-height:1.5;color:#27303f}
+  code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+  .dim{color:var(--muted-foreground)}
+  .accent{color:var(--primary)}
+  .good{color:var(--success)} .bad{color:var(--danger)}
+  ul{margin:.2em 0 0;padding-left:1.15em} li{margin:.4em 0}
+  .kicker{display:inline-flex;align-items:center;gap:.6em;color:var(--primary-strong);font-weight:800;
+    text-transform:uppercase;letter-spacing:.13em;font-size:clamp(12px,1vw,15px);margin-bottom:1.1em;
+    padding:.5em .9em;border:1px solid #dfe3fb;background:var(--primary-soft);border-radius:999px}
+  .kicker::before{content:"";width:7px;height:7px;border-radius:999px;background:linear-gradient(135deg,var(--primary),var(--accent))}
+  .big{font-size:clamp(22px,2.35vw,36px);font-weight:600;line-height:1.34;color:#1a2231}
   /* command box */
-  .cmd{margin:.7em 0;background:var(--cmd);border:1px solid var(--cmdline);border-radius:10px;
-    display:flex;align-items:stretch;overflow:hidden;max-width:1000px}
+  .cmd{margin:.72em 0;background:linear-gradient(180deg,#fbfcff,var(--code-bg));border:1px solid var(--code-border);border-radius:14px;
+    display:flex;align-items:stretch;overflow:hidden;max-width:min(1060px,100%);box-shadow:0 1px 2px rgba(11,18,32,.04),0 10px 24px rgba(79,70,229,.06)}
   .cmd code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
-    font-size:clamp(14px,1.4vw,20px);padding:14px 16px;white-space:pre-wrap;flex:1;color:#7ee787}
-  .cmd code::before{content:"$ ";color:var(--dim)}
+    font-size:clamp(13px,1.16vw,18px);line-height:1.4;padding:15px 18px;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;flex:1 1 auto;min-width:0;color:var(--primary-strong)}
+  .cmd code::before{content:"$ ";color:var(--accent);font-weight:700}
   .cmd.noprompt code::before{content:""}
-  .copy{border:0;border-left:1px solid var(--cmdline);background:#10271c;color:#7ee787;
-    padding:0 18px;cursor:pointer;font-size:14px;font-weight:600;transition:background .15s}
-  .copy:hover{background:#16462d}
-  .copy.done{background:var(--good);color:#0d1117}
-  .prompt{margin:.6em 0;background:var(--panel);border:1px dashed var(--accent);border-radius:10px;
-    padding:14px 16px;max-width:1000px;display:flex;align-items:center;gap:14px}
-  .prompt code{font-family:ui-monospace,Menlo,monospace;font-size:clamp(14px,1.4vw,20px);color:var(--fg);flex:1}
-  .watch{margin-top:.8em;background:rgba(88,166,255,.08);border-left:3px solid var(--accent);
-    padding:12px 18px;border-radius:0 8px 8px 0;max-width:1000px}
-  .watch b{color:var(--accent)}
-  table{border-collapse:collapse;margin-top:.6em;font-size:clamp(13px,1.4vw,21px)}
-  th,td{border:1px solid var(--line);padding:8px 14px;text-align:left}
-  th{background:var(--panel);color:var(--accent)}
-  .stack{display:flex;flex-direction:column;gap:6px;font-family:ui-monospace,monospace;max-width:560px}
-  .layer{border:1px solid var(--line);border-radius:8px;padding:14px 18px;background:var(--panel)}
-  .layer.h{border-color:var(--accent);background:rgba(88,166,255,.1)}
-  .layer small{color:var(--dim);font-family:inherit}
-  .two{display:grid;grid-template-columns:1fr 1fr;gap:30px;align-items:start}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 24px}
-  .card.bad{border-color:rgba(248,81,73,.5)} .card.good{border-color:rgba(63,185,80,.5)}
+  .copy{border:0;border-left:1px solid var(--code-border);background:var(--primary-soft);color:var(--primary-strong);
+    padding:0 20px;cursor:pointer;font-size:12.5px;font-weight:800;transition:background .15s,color .15s;letter-spacing:.02em}
+  .copy:hover{background:#e0e7ff}
+  .copy.done{background:var(--success-bg);color:var(--success)}
+  .prompt{margin:.65em 0;background:linear-gradient(180deg,#ffffff,#fbfcff);border:1.5px dashed var(--primary);border-radius:14px;
+    padding:15px 18px;max-width:min(1060px,100%);display:flex;align-items:center;gap:14px;box-shadow:0 1px 2px rgba(11,18,32,.04)}
+  .prompt::before{content:"PROMPT";font-family:ui-monospace,Menlo,monospace;font-size:10px;font-weight:800;letter-spacing:.12em;
+    color:#fff;background:var(--primary);padding:5px 8px;border-radius:6px;flex:0 0 auto}
+  .prompt code{font-family:ui-monospace,Menlo,monospace;font-size:clamp(13px,1.18vw,19px);line-height:1.4;color:var(--foreground);overflow-wrap:anywhere;word-break:break-word;flex:1 1 auto;min-width:0}
+  .watch{margin-top:.95em;background:linear-gradient(180deg,var(--primary-soft),#fbfcff);border:1px solid #d8def7;border-left:4px solid var(--primary);
+    padding:15px 20px;border-radius:12px;max-width:min(1060px,100%);color:#2c3357}
+  .watch b{color:var(--primary-strong)}
+  table{width:min(100%,1120px);border-collapse:separate;border-spacing:0;margin-top:.85em;font-size:clamp(13px,1.2vw,19px);
+    overflow:hidden;border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow)}
+  th,td{border:0;border-bottom:1px solid var(--border);padding:13px 18px;text-align:left}
+  tr:last-child td{border-bottom:0}
+  th{background:var(--muted);color:var(--muted-foreground);font-size:.78em;text-transform:uppercase;letter-spacing:.08em;font-weight:800}
+  .result{display:inline-flex;align-items:center;justify-content:center;min-height:28px;min-width:54px;
+    border:1px solid var(--border);border-radius:999px;padding:0 11px;font-size:13px;font-weight:800;text-transform:uppercase}
+  .result.yes{border-color:var(--success-border);background:var(--success-bg);color:var(--success)}
+  .result.no{border-color:var(--danger-border);background:var(--danger-bg);color:var(--danger)}
+  .stack{display:flex;flex-direction:column;gap:10px;font-family:ui-monospace,monospace;max-width:620px}
+  .layer{border:1px solid var(--border);border-radius:14px;padding:16px 18px;background:#fff;box-shadow:0 1px 2px rgba(11,18,32,.04)}
+  .layer.h{border-color:#c7d2fe;background:linear-gradient(135deg,var(--primary-soft),#fff);color:var(--primary-strong);box-shadow:0 8px 22px rgba(79,70,229,.12)}
+  .layer small{color:var(--muted-foreground);font-family:inherit}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+  .card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:20px 22px;box-shadow:0 1px 2px rgba(11,18,32,.04),0 12px 26px rgba(11,18,32,.05)}
+  .card.bad{border-color:var(--danger-border);background:linear-gradient(180deg,#fff,#fff5f7)}
+  .card.good{border-color:var(--success-border);background:linear-gradient(180deg,#fff,#f3fdf7)}
+  .speaker-notes{display:none}
+  #notes-panel{position:fixed;top:82px;right:28px;bottom:84px;width:min(390px,calc(100vw - 56px));
+    display:none;z-index:30;border:1px solid var(--border);border-radius:18px;background:#fff;
+    box-shadow:var(--shadow);padding:20px;overflow:auto;color:var(--foreground)}
+  body.notes-on #notes-panel{display:block}
+  #notes-panel h2{font-size:18px;margin:0 0 10px}
+  #notes-content{display:flex;flex-direction:column;gap:10px;color:var(--muted-foreground);font-size:14px;line-height:1.45}
+  #notes-content code{display:block;margin-top:4px;padding:9px 11px;border:1px solid var(--code-border);
+    border-radius:9px;background:var(--code-bg);color:var(--primary-strong);font-size:12px;overflow-wrap:anywhere}
+  #notes-content ul{margin:0;padding-left:1.2em}
+  #notes-content p{margin:0;color:inherit;font-size:14px}
   /* chrome */
-  #bar{position:fixed;top:0;left:0;height:3px;background:var(--accent);width:0;transition:width .3s;z-index:10}
-  #nav{position:fixed;bottom:16px;right:22px;color:var(--dim);font-size:14px;
-    font-family:ui-monospace,monospace;display:flex;gap:14px;align-items:center;z-index:10}
-  #nav button{background:var(--panel);border:1px solid var(--line);color:var(--fg);
-    width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px}
-  #nav button:hover{border-color:var(--accent)}
-  .hint{position:fixed;bottom:18px;left:22px;color:var(--dim);font-size:13px;z-index:10}
-  kbd{background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:1px 7px;font-size:12px}
+  #top-chrome{position:fixed;top:0;left:0;right:0;height:66px;z-index:20;display:flex;align-items:center;
+    justify-content:space-between;gap:20px;padding:0 28px;border-bottom:1px solid var(--border);
+    background:rgba(255,255,255,.78);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%)}
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .mark{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;
+    background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;font-weight:900;box-shadow:0 6px 16px rgba(79,70,229,.30)}
+  .brand-title{font-weight:780;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
+  .top-meta{display:flex;align-items:center;gap:18px;color:var(--muted-foreground);font-size:13px;font-weight:700}
+  #bar-shell{width:min(320px,28vw);height:7px;border-radius:999px;background:var(--muted);overflow:hidden;box-shadow:inset 0 1px 2px rgba(11,18,32,.06)}
+  #bar{height:100%;background:linear-gradient(90deg,var(--primary),var(--accent));width:0;transition:width .35s ease;border-radius:inherit}
+  #nav{position:fixed;bottom:18px;right:28px;color:var(--muted-foreground);font-size:14px;
+    font-family:ui-monospace,monospace;display:flex;gap:14px;align-items:center;z-index:20}
+  #nav button{background:rgba(255,255,255,.9);border:1px solid var(--border);color:var(--foreground);
+    width:40px;height:40px;border-radius:12px;cursor:pointer;font-size:16px;box-shadow:0 2px 8px rgba(11,18,32,.06);transition:border-color .15s,color .15s,background .15s,transform .15s}
+  #nav button:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-soft);transform:translateY(-1px)}
+  .hint{position:fixed;bottom:24px;left:28px;color:var(--muted-foreground);font-size:13px;z-index:20}
+  kbd{background:#fff;border:1px solid var(--border);border-radius:6px;padding:2px 7px;font-size:12px;box-shadow:0 1px 1px rgba(11,18,32,.05),0 2px 0 var(--border)}
+  @media (max-width:900px){
+    #deck{padding:74px 14px 74px}
+    .slide{margin:74px 14px 74px;padding:34px 26px}
+    .two{grid-template-columns:1fr;gap:14px}
+    #bar-shell{display:none}
+    .top-meta{gap:10px}
+    .brand-title{max-width:48vw}
+  }
+  @media (max-width:620px){
+    #top-chrome{padding:0 14px}
+    .brand-title{display:none}
+    .slide{padding:26px 18px}
+    h1{font-size:clamp(34px,13vw,58px)}
+    h2{font-size:clamp(28px,10vw,42px)}
+    p,li{font-size:16px}
+    .kicker{font-size:11px;margin-bottom:.8em}
+    .big{font-size:19px}
+    .hint{display:none}
+    #nav{left:14px;right:14px;justify-content:space-between}
+    .cmd,.prompt{flex-direction:column;margin:.48em 0}
+    .cmd{overflow:auto}
+    .cmd code,.prompt code{font-size:11px;padding:8px 10px;flex:0 0 auto}
+    .copy{border-left:0;border-top:1px solid var(--code-border);min-height:34px}
+    .watch{font-size:13px;padding:10px 12px;margin-top:.55em}
+    table{table-layout:fixed;font-size:12px;margin-top:.55em}
+    th,td{padding:8px 9px;overflow-wrap:anywhere}
+    .result{min-width:44px;min-height:24px;font-size:11px;padding:0 8px}
+  }
 </style>
 </head>
 <body>
-<div id="bar"></div>
+<header id="top-chrome">
+  <div class="brand">
+    <div class="mark" aria-hidden="true">H</div>
+    <div class="brand-title">The Harness Around the Model</div>
+  </div>
+  <div class="top-meta">
+    <div id="bar-shell"><div id="bar"></div></div>
+    <span id="top-count">1 / 16</span>
+  </div>
+</header>
 <div id="deck">
 
   <!-- 1 TITLE -->
@@ -76,7 +181,14 @@
     <div class="kicker">A talk on agentic coding</div>
     <h1>The Harness<br>Around the Model</h1>
     <p class="big dim">Why <span class="accent">context</span> — not the model — decides how a coding agent behaves.</p>
-    <p class="dim" style="margin-top:2em">Press <kbd>→</kbd> to advance. Each command slide has a <span class="accent">Copy</span> button — paste it in your terminal and let the room watch.</p>
+    <p class="dim" style="margin-top:2em">A live comparison of the same coding task across different harnesses.</p>
+    <aside class="speaker-notes">
+      <p>Open with the thesis: the model is not the interesting variable today. The environment around the agent is.</p>
+      <p>Presenter setup before starting:</p>
+      <code>cd /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo && node tools/demo.mjs init</code>
+      <code>node tools/demo.mjs serve</code>
+      <p>Keep the results page ready at http://localhost:4177/results.</p>
+    </aside>
   </section>
 
   <!-- 2 THESIS -->
@@ -84,6 +196,9 @@
     <div class="kicker">The whole talk in one line</div>
     <h2>The model is fixed.<br>The <span class="accent">harness</span> is your leverage.</h2>
     <p class="big">Same model. Same agent. We'll only change the <span class="accent">context around it</span> — and watch behavior, speed, and <span class="bad">correctness</span> change completely.</p>
+    <aside class="speaker-notes">
+      <p>Say this slowly. Everything in the demo holds the task and agent constant; the harness changes.</p>
+    </aside>
   </section>
 
   <!-- 3 LAYERS -->
@@ -103,6 +218,9 @@
         <p class="accent"><b>Contextual harness</b> — what's true about <i>this</i> repo. This is the layer we engineer. <b>This is the talk.</b></p>
       </div>
     </div>
+    <aside class="speaker-notes">
+      <p>Use this slide to define the stack. The rest of the talk zooms into the contextual harness: names, docs, tools, prompts, MCP.</p>
+    </aside>
   </section>
 
   <!-- 4 NOT MAGIC -->
@@ -113,15 +231,21 @@
     <p class="big" style="font-family:ui-monospace,monospace;margin-top:.6em">
       search files → grep words → read → <span class="good">edit</span> → repeat</p>
     <p class="dim">Everything we do to the harness just makes one of those steps cheaper — or skips it.</p>
+    <aside class="speaker-notes">
+      <p>Frame the agent as a loop over search and observation, not as magic. That makes the later results intuitive.</p>
+    </aside>
   </section>
 
   <!-- 5 PROBE (live, model-free) -->
   <section class="slide">
     <div class="kicker">Live · no agent needed</div>
     <h2>Watch the agent's <span class="accent">first move</span></h2>
-    <p>An agent's first move is a search. So we can measure harness quality by running that search ourselves — does it <span class="good">LAND</span> on the target, or come back <span class="bad">COLD</span>?</p>
+    <p>An agent's first move is search. The harness decides whether that search returns a useful path or a dead end.</p>
     <div class="cmd"><code>cd /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/concepts && ./probe.sh</code><button class="copy">Copy</button></div>
-    <div class="watch"><b>What they'll see:</b> three pairs — bad vs good naming — and the bad one returns 0 hits. <span class="bad">COLD = the model has to guess.</span></div>
+    <div class="watch"><b>Signal:</b> searchable names and docs create a path; missing context turns discovery into guessing.</div>
+    <aside class="speaker-notes">
+      <p>Switch to the terminal and run the command. Point out the bad/good pairs and explain that 0 hits means the search surface gives the agent no path.</p>
+    </aside>
   </section>
 
   <!-- 6 FILE NAMES -->
@@ -133,6 +257,9 @@
       <div class="card good"><h3 class="good">good/</h3><code>utils/user-permissions.js</code><p class="dim"><code>glob **/*permission*</code> → <span class="good">1 hit</span></p></div>
     </div>
     <p style="margin-top:1em">Same code. Same model. A searchable name turns discovery into a one-line lookup.</p>
+    <aside class="speaker-notes">
+      <p>Land the phrase: file names are an index for agents. This is context engineering, not prompt wording.</p>
+    </aside>
   </section>
 
   <!-- 7 VARIABLE NAMES -->
@@ -144,6 +271,9 @@
       <div class="card good"><h3 class="good">clean</h3><code>const userPermissions = {<br>&nbsp;&nbsp;bhaskar: { permissionLevel: "read" } }</code><p class="dim">→ <span class="good">5 hits</span></p></div>
     </div>
     <p style="margin-top:1em">The model reads English. <span class="accent">Your variable names are the search terms.</span> <code>lv:"r"</code> is invisible to the query the agent runs.</p>
+    <aside class="speaker-notes">
+      <p>Keep this short. It supports the naming argument and broadens it beyond filenames.</p>
+    </aside>
   </section>
 
   <!-- 8 COLD START DOC -->
@@ -156,6 +286,9 @@
       <div class="card good"><h3 class="good">with/</h3><p>doc says "edit <code>utils/acl.js</code>" → goes straight there</p></div>
     </div>
     <p style="margin-top:1em">Write it once. It pays back on <i>every task forever.</i> Cheapest harness upgrade there is.</p>
+    <aside class="speaker-notes">
+      <p>Call this the repo's cold-start map. Agents need a map before they need cleverness.</p>
+    </aside>
   </section>
 
   <!-- 9 TRANSITION TO SCENARIOS -->
@@ -164,8 +297,14 @@
     <h2>Same task. Four versions of one repo.</h2>
     <p class="big">A real Express API. We change <b>only the harness</b> between runs and count what the agent does.</p>
     <div class="prompt"><code>Change bhaskar's permission level from "read" to "write" in this project.</code><button class="copy">Copy</button></div>
-    <p class="dim">Reset everything to a clean state first:</p>
-    <div class="cmd"><code>cd /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo && ./reset.sh</code><button class="copy">Copy</button></div>
+    <div class="two">
+      <div class="card"><h3>Fixed</h3><p>Task, model, agent loop, and user prompt.</p></div>
+      <div class="card good"><h3>Variable</h3><p>The repo context: names, docs, tools, and source-of-truth signals.</p></div>
+    </div>
+    <aside class="speaker-notes">
+      <p>This is the transition into live demos. Confirm the results tab is open before continuing.</p>
+      <code>node /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/tools/demo.mjs score</code>
+    </aside>
   </section>
 
   <!-- 10 SCENARIO 1 -->
@@ -173,9 +312,14 @@
     <div class="kicker">Scenario 1 · no harness</div>
     <h2>Maximum ambiguity</h2>
     <p>Cryptic target name + <b>4 decoy files</b> that all contain <code>bhaskar</code> and a <code>level</code>.</p>
-    <div class="cmd"><code>cd /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/scenario-1 && opencode</code><button class="copy">Copy</button></div>
+    <div class="cmd"><code>node /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/tools/demo.mjs stage 1</code><button class="copy">Copy</button></div>
+    <div class="cmd"><code>cd /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/scenario-1 && opencode --model github-copilot/claude-haiku-4.5</code><button class="copy">Copy</button></div>
     <div class="prompt"><code>Change bhaskar's permission level from "read" to "write" in this project.</code><button class="copy">Copy</button></div>
-    <div class="watch"><b>What to watch:</b> it greps, opens file after file… and in our recorded run <span class="bad">edited the WRONG file.</span> Not slow — <b>incorrect.</b></div>
+    <div class="cmd"><code>node /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/tools/demo.mjs verify 1</code><button class="copy">Copy</button></div>
+    <div class="watch"><b>Result pattern:</b> ambiguity creates extra exploration, and the wrong file is plausible enough to edit.</div>
+    <aside class="speaker-notes">
+      <p>Run stage, then opencode, paste the task, then verify. If the live run takes too long, describe the recorded run: it edited access-defaults.js, not the production ACL.</p>
+    </aside>
   </section>
 
   <!-- 11 SCENARIO 2 -->
@@ -183,9 +327,14 @@
     <div class="kicker">Scenario 2 · lever: naming</div>
     <h2>Give it one good filename</h2>
     <p>Decoys gone. Target renamed to <code>utils/user-permissions.js</code>.</p>
-    <div class="cmd"><code>cd /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/scenario-2 && opencode</code><button class="copy">Copy</button></div>
+    <div class="cmd"><code>node /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/tools/demo.mjs stage 2</code><button class="copy">Copy</button></div>
+    <div class="cmd"><code>cd /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/scenario-2 && opencode --model github-copilot/claude-haiku-4.5</code><button class="copy">Copy</button></div>
     <div class="prompt"><code>Change bhaskar's permission level from "read" to "write" in this project.</code><button class="copy">Copy</button></div>
-    <div class="watch"><b>What to watch:</b> <code>glob **/*permission*</code> → one file → read → edit. Nothing changed in the model.</div>
+    <div class="cmd"><code>node /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/tools/demo.mjs verify 2</code><button class="copy">Copy</button></div>
+    <div class="watch"><b>Result pattern:</b> one semantic filename collapses discovery into a short path.</div>
+    <aside class="speaker-notes">
+      <p>Run the same loop. Emphasize that no model change happened. The filename is the search signal.</p>
+    </aside>
   </section>
 
   <!-- 12 SCENARIO 4 -->
@@ -193,23 +342,33 @@
     <div class="kicker">Scenario 4 · lever: a custom tool</div>
     <h2>Same mess as #1 — but with a tool</h2>
     <p>Identical messy repo. Plus a <code>CLAUDE.md</code> that says: <i>don't grep — run the helper.</i></p>
-    <div class="cmd"><code>cd /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/scenario-4 && opencode</code><button class="copy">Copy</button></div>
+    <div class="cmd"><code>node /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/tools/demo.mjs stage 4</code><button class="copy">Copy</button></div>
+    <div class="cmd"><code>cd /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/scenario-4 && opencode --model github-copilot/claude-haiku-4.5</code><button class="copy">Copy</button></div>
     <div class="prompt"><code>Change bhaskar's permission level from "read" to "write" in this project.</code><button class="copy">Copy</button></div>
-    <div class="watch"><b>What to watch:</b> it runs the tool, is told the exact file, edits it. <span class="good">Correct in ~3 calls on the repo that broke #1.</span> This is what an MCP server or slash-command does at scale.</div>
+    <div class="cmd"><code>node /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/tools/demo.mjs verify 4</code><button class="copy">Copy</button></div>
+    <div class="watch"><b>Result pattern:</b> the helper replaces search with ground truth, even in the messy repo.</div>
+    <aside class="speaker-notes">
+      <p>This is the money comparison with Scenario 1. Same messy codebase, but the tool names the production source of truth.</p>
+    </aside>
   </section>
 
   <!-- 13 EVAL -->
   <section class="slide">
     <div class="kicker">Don't take it on faith · prove it</div>
     <h2>The eval</h2>
-    <div class="cmd"><code>node /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/tools/session-table.mjs</code><button class="copy">Copy</button></div>
+    <div class="cmd"><code>node /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/tools/demo.mjs score</code><button class="copy">Copy</button></div>
     <table>
       <tr><th>scenario</th><th>lever added</th><th>tool calls</th><th>correct file?</th></tr>
-      <tr><td>s1</td><td>none</td><td><b>9</b></td><td class="bad">❌ NO (wrong file)</td></tr>
-      <tr><td>s2</td><td>naming</td><td>6</td><td class="good">✅</td></tr>
-      <tr><td>s3</td><td>docs (CLAUDE.md)</td><td><b>2</b></td><td class="good">✅</td></tr>
-      <tr><td>s4</td><td>skill / tool</td><td>3</td><td class="good">✅ (on s1's messy repo)</td></tr>
+      <tr><td>s1</td><td>none</td><td><b>9</b></td><td><span class="result no">No</span> <span class="bad">wrong file</span></td></tr>
+      <tr><td>s2</td><td>naming</td><td>6</td><td><span class="result yes">Yes</span></td></tr>
+      <tr><td>s3</td><td>docs (CLAUDE.md)</td><td><b>2</b></td><td><span class="result yes">Yes</span></td></tr>
+      <tr><td>s4</td><td>skill / tool</td><td>3</td><td><span class="result yes">Yes</span> <span class="good">on s1's messy repo</span></td></tr>
     </table>
+    <p class="dim" style="margin-top:.8em;font-size:clamp(13px,1.05vw,16px)"><b>Tool-call counts</b> come from the recorded eval. The <b>live run</b> on the scoreboard proves <span class="accent">correctness</span> — which file actually changed.</p>
+    <aside class="speaker-notes">
+      <p>Run score and switch to the results tab. If live timing gets risky, load the recorded session outcomes.</p>
+      <code>node /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo/tools/demo.mjs recorded</code>
+    </aside>
   </section>
 
   <!-- 14 MONEY SLIDE -->
@@ -220,6 +379,9 @@
     <p class="big"><span class="bad">s1</span>: flails, edits the wrong permissions file.</p>
     <p class="big"><span class="good">s4</span>: nails it in 3 calls.</p>
     <p class="big accent">The only difference is one tool + one doc. Pure harness.</p>
+    <aside class="speaker-notes">
+      <p>Do not rush this slide. This is the central proof: same messy repo, same task, same agent; the harness changed the outcome.</p>
+    </aside>
   </section>
 
   <!-- 15 LEVERS RECAP -->
@@ -234,6 +396,9 @@
       <tr><td>Prompts</td><td>standardizes <i>how</i> a task is done, every time</td></tr>
     </table>
     <p class="dim" style="margin-top:.8em">None of these touch the model.</p>
+    <aside class="speaker-notes">
+      <p>Connect the small demo to larger systems: MCP is the same idea applied to live databases, tickets, browsers, docs, or internal APIs.</p>
+    </aside>
   </section>
 
   <!-- 16 CLOSE -->
@@ -243,9 +408,17 @@
     <p class="big">The model is a commodity. The harness is your leverage.</p>
     <p class="big"><b>Piper</b> is where you encode these choices — search, context, tools, workflow.</p>
     <p class="dim">Meta-point: the assistant that helped build this demo is itself part of the harness. We didn't get a better model — we gave it better context.</p>
+    <aside class="speaker-notes">
+      <p>Final line: stop tuning the model you cannot change; engineer the context you can.</p>
+    </aside>
   </section>
 
 </div>
+
+<aside id="notes-panel" aria-live="polite">
+  <h2>Speaker Notes</h2>
+  <div id="notes-content"></div>
+</aside>
 
 <div id="nav">
   <button id="prev" aria-label="Previous">‹</button>
@@ -257,12 +430,15 @@
 <script>
   const slides=[...document.querySelectorAll('.slide')];
   let i=slides.findIndex(s=>s.classList.contains('active'));
-  const bar=document.getElementById('bar'), count=document.getElementById('count');
+  const bar=document.getElementById('bar'), count=document.getElementById('count'), topCount=document.getElementById('top-count'), notesContent=document.getElementById('notes-content');
   function show(n){
     i=Math.max(0,Math.min(slides.length-1,n));
     slides.forEach((s,k)=>s.classList.toggle('active',k===i));
     bar.style.width=((i+1)/slides.length*100)+'%';
     count.textContent=(i+1)+' / '+slides.length;
+    topCount.textContent=(i+1)+' / '+slides.length;
+    const notes=slides[i].querySelector('.speaker-notes');
+    notesContent.innerHTML=notes?notes.innerHTML:'<p>No notes for this slide.</p>';
   }
   document.getElementById('next').onclick=()=>show(i+1);
   document.getElementById('prev').onclick=()=>show(i-1);
@@ -271,6 +447,7 @@
     else if(['ArrowLeft','PageUp'].includes(e.key)){show(i-1);e.preventDefault();}
     else if(e.key==='Home')show(0);
     else if(e.key==='End')show(slides.length-1);
+    else if(e.key==='n'||e.key==='N')document.body.classList.toggle('notes-on');
     else if(e.key==='f'||e.key==='F'){
       if(!document.fullscreenElement)document.documentElement.requestFullscreen();
       else document.exitFullscreen();

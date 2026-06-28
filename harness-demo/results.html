@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Harness Demo Live Results</title>
+<style>
+  :root {
+    --background: #f5f6fb;
+    --foreground: #0b1220;
+    --card: #ffffff;
+    --card-foreground: #0b1220;
+    --muted: #eef1f8;
+    --muted-foreground: #5b6678;
+    --border: #e6e8f3;
+    --primary: #4f46e5;
+    --primary-strong: #4338ca;
+    --primary-foreground: #ffffff;
+    --accent: #0ea5b7;
+    --ring: rgba(79, 70, 229, 0.18);
+    --success: #15803d;
+    --success-bg: #dcfce7;
+    --success-border: #bbf7d0;
+    --danger: #e11d48;
+    --danger-bg: #ffe4e6;
+    --danger-border: #fecdd3;
+    --warning: #b45309;
+    --warning-bg: #fef3c7;
+    --warning-border: #fde68a;
+    --neutral: #475569;
+    --neutral-bg: #eef1f8;
+    --neutral-border: #cbd5e1;
+    --shadow: 0 1px 2px rgba(11, 18, 32, 0.04), 0 14px 30px rgba(11, 18, 32, 0.06), 0 40px 80px rgba(11, 18, 32, 0.06);
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background:
+      radial-gradient(900px 520px at 8% -6%, rgba(79, 70, 229, 0.10), transparent 60%),
+      radial-gradient(820px 480px at 100% 0%, rgba(14, 165, 183, 0.08), transparent 55%),
+      radial-gradient(circle at 1px 1px, rgba(11, 18, 32, 0.04) 1px, transparent 0) 0 0/22px 22px,
+      var(--background);
+    color: var(--foreground);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  }
+  body { padding: 24px; }
+  .shell {
+    width: min(1380px, 100%);
+    margin: 0 auto;
+  }
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 8px 0 22px;
+  }
+  .identity {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+  }
+  .mark {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: #ffffff;
+    font-weight: 900;
+    letter-spacing: 0;
+    box-shadow: 0 6px 16px rgba(79, 70, 229, 0.30);
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(28px, 3.3vw, 48px);
+    line-height: 1.05;
+    letter-spacing: 0;
+  }
+  .sub {
+    margin: 6px 0 0;
+    color: var(--muted-foreground);
+    font-size: clamp(15px, 1.2vw, 18px);
+  }
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: 999px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: var(--muted-foreground);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .status::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--success);
+    box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.12);
+  }
+  .status[data-state="offline"]::before {
+    background: var(--danger);
+    box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12);
+  }
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 16px;
+    align-items: stretch;
+  }
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .metric {
+    position: relative;
+    min-height: 118px;
+    padding: 18px 18px 16px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    overflow: hidden;
+  }
+  .metric::after {
+    content: "";
+    position: absolute;
+    inset: auto 14px 12px auto;
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    background: radial-gradient(circle at 35% 35%, rgba(79, 70, 229, 0.18), rgba(14, 165, 183, 0.05));
+  }
+  .metric .label {
+    color: var(--muted-foreground);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+  }
+  .metric .value {
+    margin-top: 12px;
+    font-size: clamp(30px, 3.2vw, 46px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0;
+    color: var(--card-foreground);
+  }
+  .metric .note {
+    margin-top: 10px;
+    color: var(--muted-foreground);
+    font-size: 14px;
+    line-height: 1.35;
+    max-width: 18rem;
+  }
+  .summary-card {
+    border: 1px solid #c7d2fe;
+    border-radius: var(--radius);
+    background: linear-gradient(145deg, #eef2ff, #ffffff);
+    box-shadow: var(--shadow);
+    padding: 18px;
+  }
+  .summary-card .label {
+    color: var(--primary);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .summary-card .headline {
+    margin-top: 10px;
+    font-size: 28px;
+    line-height: 1.05;
+    font-weight: 850;
+    letter-spacing: 0;
+  }
+  .summary-card .copy {
+    margin: 12px 0 0;
+    color: #475569;
+    line-height: 1.45;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 16px;
+    align-items: start;
+    margin-top: 16px;
+  }
+  .board, .rail {
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .board-head, .rail-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--card);
+  }
+  .board-head h2, .rail-head h2 {
+    margin: 0;
+    font-size: 18px;
+    letter-spacing: 0;
+  }
+  .board-head span {
+    color: var(--muted-foreground);
+    font-size: 14px;
+  }
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
+  }
+  th, td {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    text-align: left;
+  }
+  th {
+    color: var(--muted-foreground);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    background: var(--muted);
+    font-weight: 800;
+  }
+  td {
+    font-size: 15px;
+    background: var(--card);
+  }
+  tbody tr {
+    transition: background-color 160ms ease, box-shadow 160ms ease;
+  }
+  tbody tr:hover td {
+    background: #f8fafc;
+  }
+  tr:last-child td { border-bottom: 0; }
+  .scenario {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .scenario strong {
+    font-size: 16px;
+    line-height: 1.15;
+  }
+  .scenario span, .muted { color: var(--muted-foreground); }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-width: 78px;
+    min-height: 28px;
+    padding: 0 10px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .pill::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: currentColor;
+  }
+  .pending {
+    background: var(--neutral-bg);
+    border-color: var(--neutral-border);
+    color: var(--neutral);
+  }
+  .running {
+    background: var(--warning-bg);
+    border-color: var(--warning-border);
+    color: var(--warning);
+  }
+  .passed {
+    background: var(--success-bg);
+    border-color: var(--success-border);
+    color: var(--success);
+  }
+  .failed {
+    background: var(--danger-bg);
+    border-color: var(--danger-border);
+    color: var(--danger);
+  }
+  .bar {
+    position: relative;
+    width: 100%;
+    height: 32px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--muted);
+  }
+  .bar-fill {
+    height: 100%;
+    min-width: 3px;
+    background: linear-gradient(90deg, #818cf8, #22c55e);
+  }
+  .bar-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    color: var(--foreground);
+    font-size: 13px;
+  }
+  .file {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    color: #334155;
+    overflow-wrap: anywhere;
+    line-height: 1.3;
+  }
+  .truth {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 42px;
+    height: 26px;
+    border: 1px solid var(--neutral-border);
+    border-radius: 999px;
+    background: var(--neutral-bg);
+    color: var(--neutral);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+  .truth.yes {
+    border-color: var(--success-border);
+    background: var(--success-bg);
+    color: var(--success);
+  }
+  .truth.no {
+    border-color: var(--danger-border);
+    background: var(--danger-bg);
+    color: var(--danger);
+  }
+  .notes {
+    color: var(--muted-foreground);
+    line-height: 1.35;
+  }
+  .rail-body { padding: 16px; }
+  .prompt {
+    padding: 14px;
+    border: 1px solid #c7d2fe;
+    border-radius: 8px;
+    background: #eef2ff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: var(--primary-strong);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .event {
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #ffffff;
+  }
+  .event strong {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 13px;
+    color: var(--foreground);
+  }
+  .event span {
+    display: block;
+    color: var(--muted-foreground);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  @media (max-width: 980px) {
+    body { padding: 18px; }
+    .topbar { align-items: flex-start; flex-direction: column; }
+    .status { width: fit-content; }
+    .hero { grid-template-columns: 1fr; }
+    .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid { grid-template-columns: 1fr; }
+    table { table-layout: auto; }
+    th:nth-child(3), td:nth-child(3),
+    th:nth-child(5), td:nth-child(5) { display: none; }
+  }
+  @media (max-width: 620px) {
+    .identity { align-items: flex-start; }
+    .mark { width: 38px; height: 38px; border-radius: 10px; }
+    .metrics { grid-template-columns: 1fr; }
+    th, td { padding: 12px 10px; }
+    th:nth-child(4), td:nth-child(4) { display: none; }
+    .summary-card .headline { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+<main class="shell">
+  <header class="topbar">
+    <div class="identity">
+      <div class="mark" aria-hidden="true">H</div>
+      <div>
+        <h1>Live Harness Score</h1>
+        <p class="sub">The model and task stay fixed. The harness changes.</p>
+      </div>
+    </div>
+    <div class="status" id="status">Connecting...</div>
+  </header>
+
+  <section class="hero">
+    <div class="metrics" aria-label="Score summary">
+      <div class="metric">
+        <div class="label">Live passes</div>
+        <div class="value" id="passes">0/4</div>
+        <div class="note">Rows turn green after a verified run.</div>
+      </div>
+      <div class="metric">
+        <div class="label">Recorded tool calls</div>
+        <div class="value" id="calls">9 -> 2</div>
+        <div class="note">From the recorded eval. The live run proves correctness, not counts.</div>
+      </div>
+      <div class="metric">
+        <div class="label">Money comparison</div>
+        <div class="value" id="money">s1/s4</div>
+        <div class="note">Same messy repo, different harness.</div>
+      </div>
+      <div class="metric">
+        <div class="label">Active scenario</div>
+        <div class="value" id="active">none</div>
+        <div class="note">Updated by the stage command.</div>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Talk thesis</div>
+      <div class="headline">Same agent. Different harness.</div>
+      <p class="copy">Tool-call counts come from the recorded eval. Each live run proves <b>correctness</b> — which file actually changed. The visual jump from s1 to s4 is the story.</p>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="board">
+      <div class="board-head">
+        <h2>Scenario Scoreboard</h2>
+        <span id="updated">Waiting for state</span>
+      </div>
+      <table>
+        <colgroup>
+          <col style="width: 22%" />
+          <col style="width: 12%" />
+          <col style="width: 17%" />
+          <col style="width: 13%" />
+          <col style="width: 18%" />
+          <col style="width: 18%" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th>Live</th>
+            <th>Recorded calls</th>
+            <th>Correct</th>
+            <th>Edited file</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+
+    <aside class="rail">
+      <div class="rail-head">
+        <h2>Run Loop</h2>
+      </div>
+      <div class="rail-body">
+        <div class="prompt" id="prompt">Loading prompt...</div>
+        <div class="timeline" id="timeline"></div>
+      </div>
+    </aside>
+  </section>
+</main>
+
+<script>
+  const rowsEl = document.getElementById("rows");
+  const statusEl = document.getElementById("status");
+  const updatedEl = document.getElementById("updated");
+  const passesEl = document.getElementById("passes");
+  const callsEl = document.getElementById("calls");
+  const moneyEl = document.getElementById("money");
+  const activeEl = document.getElementById("active");
+  const promptEl = document.getElementById("prompt");
+  const timelineEl = document.getElementById("timeline");
+
+  async function refresh() {
+    try {
+      const response = await fetch("/api/state", { cache: "no-store" });
+      if (!response.ok) throw new Error(response.statusText);
+      const state = await response.json();
+      render(state);
+      statusEl.dataset.state = "online";
+      statusEl.textContent = "Live - polling every 1.5s";
+    } catch (error) {
+      statusEl.dataset.state = "offline";
+      statusEl.textContent = "Offline - start demo.mjs serve";
+    }
+  }
+
+  function render(state) {
+    const rows = state.rows || [];
+    const maxCalls = Math.max(1, ...rows.map((row) => row.recorded?.total_tools || 0));
+    const passes = rows.filter((row) => row.status === "passed").length;
+    passesEl.textContent = `${passes}/${rows.length}`;
+
+    const totals = rows.map((row) => row.recorded?.total_tools).filter(Boolean);
+    const highest = Math.max(...totals);
+    const lowest = Math.min(...totals);
+    callsEl.textContent = `${highest} -> ${lowest}`;
+
+    const s1 = rows.find((row) => row.id === 1)?.recorded?.total_tools;
+    const s4 = rows.find((row) => row.id === 4)?.recorded?.total_tools;
+    moneyEl.textContent = s1 && s4 ? `${s1} -> ${s4}` : "s1/s4";
+
+    activeEl.textContent = state.activeScenario ? `s${state.activeScenario}` : "none";
+    promptEl.textContent = state.prompt || "";
+    updatedEl.textContent = state.lastUpdatedAt ? `Updated ${formatTime(state.lastUpdatedAt)}` : "Waiting";
+
+    rowsEl.innerHTML = rows.map((row) => {
+      const live = row.live || {};
+      const status = row.status || "pending";
+      const calls = row.recorded?.total_tools || 0;
+      const percent = Math.max(5, Math.round((calls / maxCalls) * 100));
+      const correct = live.correct_target === true ? "yes" : live.correct_target === false ? "no" : "-";
+      const correctClass = live.correct_target === true ? "yes" : live.correct_target === false ? "no" : "";
+      return `
+        <tr>
+          <td>
+            <div class="scenario">
+              <strong>${escapeHtml(row.label)} - ${escapeHtml(row.title)}</strong>
+              <span>${escapeHtml(row.lever)} - ${escapeHtml(row.codebase)}</span>
+            </div>
+          </td>
+          <td><span class="pill ${escapeHtml(status)}">${escapeHtml(status)}</span></td>
+          <td>
+            <div class="bar">
+              <div class="bar-fill" style="width:${percent}%"></div>
+              <div class="bar-label">${calls || "-"} calls</div>
+            </div>
+          </td>
+          <td><span class="truth ${escapeHtml(correctClass)}">${escapeHtml(correct)}</span></td>
+          <td class="file">${escapeHtml(live.edited_file || row.recorded?.edited_file || "-")}</td>
+          <td class="notes">${escapeHtml(live.notes || row.recorded?.notes || "")}</td>
+        </tr>
+      `;
+    }).join("");
+
+    const timeline = [...(state.timeline || [])].slice(-6).reverse();
+    timelineEl.innerHTML = timeline.length
+      ? timeline.map((item) => `
+          <div class="event">
+            <strong>${escapeHtml(item.action)} ${item.scenario ? `s${item.scenario}` : ""}</strong>
+            <span>${escapeHtml(formatTime(item.at))}</span>
+            <span>${escapeHtml(item.message)}</span>
+          </div>
+        `).join("")
+      : '<div class="event"><strong>ready</strong><span>Run init, then stage a scenario.</span></div>';
+  }
+
+  function formatTime(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value || "";
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  refresh();
+  setInterval(refresh, 1500);
+</script>
+</body>
+</html>
