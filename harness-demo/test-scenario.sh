@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 usage() {
   echo "Usage: $0 <scenario> [--verify]"
   echo ""
-  echo "  scenario   1, 2, 3, or 4"
+  echo "  scenario   1, 2, 3, 4, or 5"
   echo "  --verify   Check if bhaskar's permission was changed to 'write'"
   echo ""
   echo "Examples:"
@@ -50,8 +50,15 @@ case "$SCENARIO" in
     STORY="Same messy codebase as scenario 1. CLAUDE.md says: use tools/find-permission.js."
     EXPECTED="3–4 tool calls (recorded run: 3) — agent runs the skill, gets exact file+value, edits it"
     ;;
+  5)
+    DIR="$SCRIPT_DIR/scenario-5"
+    TARGET="utils/cfg_res_acl.js"
+    HAS_CLAUDE="Yes (documents the System 1 tool, not the file)"
+    STORY="Same messy codebase as scenario 1. AGENTS.md says: ask tools/system1.mjs rank first. No registry, no hint."
+    EXPECTED="~3 tool calls (no recording yet) — agent asks the fast model, opens the top file, edits it"
+    ;;
   *)
-    echo "Error: scenario must be 1, 2, 3, or 4"; usage ;;
+    echo "Error: scenario must be 1, 2, 3, 4, or 5"; usage ;;
 esac
 
 [[ ! -d "$DIR" ]] && { echo "Error: $DIR not found"; exit 1; }
@@ -108,7 +115,7 @@ echo -e "$BOTH_LIST"
 echo ""
 
 echo "── Task prompt (paste into the agent) ──"
-cat "$DIR/TASK.md"
+cat "$SCRIPT_DIR/TASK.md"
 echo ""
 
 echo "── Current state of $TARGET ──"
@@ -124,6 +131,12 @@ fi
 if [[ -f "$DIR/tools/find-permission.js" ]]; then
   echo "── Skill output: node tools/find-permission.js bhaskar ──"
   (cd "$DIR" && node tools/find-permission.js bhaskar)
+  echo ""
+fi
+
+if [[ -f "$DIR/tools/system1.mjs" ]]; then
+  echo "── System 1 output: node tools/system1.mjs rank \"bhaskar permission level\" ──"
+  (cd "$DIR" && node tools/system1.mjs rank "bhaskar permission level")
   echo ""
 fi
 

@@ -1,197 +1,116 @@
 # harness-demo
 
-Four identical tasks. Same agent. Dramatically different number of tool calls.
-The only variable is how much **context** the codebase provides — and what form that context takes.
-
----
-
-## The task (same in all four scenarios)
+A one-hour, mostly live session on how a coding agent works. The same task runs
+again and again with the same agent and model. The only thing that changes is
+the repo around it: names, `AGENTS.md`, a project tool, and a fast "System 1"
+model.
 
 ```
 Change bhaskar's permission level from "read" to "write" in this project.
 ```
 
----
+- **Deck:** `presentation.html`, served by `node tools/demo.mjs serve`. Every
+  slide has a terminal tray at the bottom with the commands for that moment:
+  click one or press its number to copy it.
+- **Runbook:** [`PRESENTER_PREP.md`](PRESENTER_PREP.md): setup, the run loop,
+  fallbacks.
+- **Run of show:** [`PRESENTATION.md`](PRESENTATION.md): timings and the talk
+  track per act.
 
-## The four scenarios
-
-### Scenario 1 — No context, maximum ambiguity
-
-The target file (`utils/cfg_res_acl.js`) has a cryptic name. There are also
-**4 decoy files** that all look like permission configs and all contain `bhaskar`
-with a `level` field:
-
-| File | What it is |
-|------|-----------|
-| `config/access-defaults.js` | Provisioning defaults — not the live config |
-| `config/env-overrides.js` | `bhaskar: { level: "write" }` — staging env only |
-| `utils/permissions-snapshot.js` | Auto-generated cache — do not edit directly |
-| `utils/permissions-legacy.js` | Deprecated v1 format — legacy API only |
-| `utils/cfg_res_acl.js` | **← the production source of truth** |
-
-Even `glob **/*permission*` misleads: it returns the snapshot and legacy files — not the target.
-
-The agent greps for "bhaskar", gets 13 hits across 13 files, and must open and
-evaluate 4–5 configs before finding the right one.
-
-**Expected: ~9–14 tool calls** (recorded run: **9**, and it edited the *wrong* file)
-
----
-
-### Scenario 2 — No context, one clearly-named file
-
-Same core project. The 4 decoy files are gone. The target is `utils/user-permissions.js`.
-
-`glob **/*permission*` → 1 file → the target, immediately.
-
-**Expected: ~3–6 tool calls** (recorded run: **6**)
-
----
-
-### Scenario 3 — CLAUDE.md points directly to the file
-
-Same as scenario 2, plus `CLAUDE.md` explicitly names `utils/user-permissions.js`
-as the permission source of truth. The agent reads it on startup and goes straight there.
-
-**Expected: 2–3 tool calls** (recorded run: **2**)
-
----
-
-### Scenario 4 — Custom skill on a messy codebase
-
-**Same messy codebase as scenario 1** (all 4 decoys, cryptic filename) — but with
-`tools/find-permission.js`, a project-specific helper script.
-
-`CLAUDE.md` tells the agent: "use `node tools/find-permission.js <username>` — don't search manually."
-
-The agent runs the skill, gets back:
-
-```
-Permission config for: bhaskar
-  File  : utils/cfg_res_acl.js
-  Level : "read"
-  ...
-To update, edit the "level" field for "bhaskar" in: utils/cfg_res_acl.js
-```
-
-It then makes the edit. The 4 decoy files are irrelevant — the tool already knows which file is the source of truth via `tools/permission-registry.json`.
-
-**Expected: 3–4 tool calls** (recorded run: **3**) — on the identical messy codebase that took 9 (and a wrong edit) in scenario 1.
-
----
-
-## What to observe
-
-```
-Scenario 1   grep → 13 hits → open access-defaults.js  → wrong (provisioning only)
-                             → open env-overrides.js   → wrong (staging only)
-                             → open permissions-snapshot.js → wrong (cached)
-                             → open permissions-legacy.js   → wrong (v1 format)
-                             → open cfg_res_acl.js → ✓ edit
-             ≈ 9–14 tool calls   (recorded run: 9, wrong file)
-
-Scenario 2   glob **/*permission* → 1 hit → open user-permissions.js → ✓ edit
-             ≈ 3–6 tool calls    (recorded run: 6)
-
-Scenario 3   read CLAUDE.md → open user-permissions.js → ✓ edit
-             ≈ 2–3 tool calls
-
-Scenario 4   read CLAUDE.md → run tools/find-permission.js bhaskar
-                             → told: utils/cfg_res_acl.js, level "read"
-                             → edit cfg_res_acl.js → ✓
-             ≈ 3–4 tool calls  (on scenario 1's codebase)
-```
-
----
-
-## How to run
+## Quick start
 
 ```bash
-# Start a clean rehearsal and create the live scoreboard state
-node tools/demo.mjs init
-
-# Serve the browser deck and live results page
-node tools/demo.mjs serve
+cd harness-demo
+node tools/demo.mjs doctor   # preflight: agent on PATH, credentials, clean fixtures
+node tools/demo.mjs init     # reset every fixture and the scoreboard
+node tools/demo.mjs serve    # keep running; open http://localhost:4177/presentation
 ```
 
-Open:
+The agent command is the same for every run. It defaults to
+`opencode --model github-copilot/claude-haiku-4.5` (what the recordings used).
+Change it in the deck (press <kbd>S</kbd>) and for the CLI with
+`HARNESS_AGENT="pi --provider anthropic --model claude-haiku-4-5"`.
 
-- `http://localhost:4177/presentation`
-- `http://localhost:4177/results`
+## What's in here
 
-For each live run, use the same loop:
+| Path | What it is |
+|------|------------|
+| `concepts/01-explore-loop` | 3 files. Ask a question, then ask for a change, and compare. |
+| `concepts/02-file-names` | `utils/u.js` vs `utils/user-permissions.js` |
+| `concepts/03-variable-names` | `lv: "r"` vs `permissionLevel: "read"` |
+| `concepts/04-coldstart-doc` | the same look-alikes with and without `AGENTS.md` |
+| `concepts/probe.sh` | runs the agent's first search without a model: lands or cold |
+| `scenario-1` | Express API, cryptic target name, 4 look-alike permission files |
+| `scenario-2` | look-alikes removed, target renamed `utils/user-permissions.js` |
+| `scenario-3` | scenario-2 plus an `AGENTS.md` that names the file |
+| `scenario-4` | scenario-1's files plus `tools/find-permission.js` and a hand-written registry |
+| `scenario-5` | scenario-1's files plus `tools/system1.mjs`, a generic ranker backed by a fast model |
+| `recordings/` | real opencode transcripts of s1–s4 (Claude Haiku 4.5) |
+| `tools/demo.mjs` | stage manager: doctor, init, serve, stage, verify, trace, score |
+| `tools/session-table.mjs` | parses the recordings into the eval table |
+
+The look-alikes in scenario-1, 4 and 5:
+
+| File | What it really is |
+|------|-------------------|
+| `utils/cfg_res_acl.js` | **the production source of truth (target)** |
+| `config/access-defaults.js` | defaults for new accounts |
+| `config/env-overrides.js` | staging and dev only (bhaskar is already `write` there) |
+| `utils/permissions-snapshot.js` | auto-generated cache |
+| `utils/permissions-legacy.js` | deprecated v1 format |
+
+## Recorded results
+
+Same model (Claude Haiku 4.5 in opencode), same prompt:
+
+| Run | Lever | Tool calls | Model time | File edited |
+|-----|-------|-----------:|-----------:|-------------|
+| s1 | none | 9 | 32.8 s | `config/access-defaults.js` (**wrong**) |
+| s2 | naming | 6 | 16.9 s | `utils/user-permissions.js` |
+| s3 | `AGENTS.md` | 2 | 15.6 s | `utils/user-permissions.js` |
+| s4 | `AGENTS.md` + project tool | 3 | 23.8 s | `utils/cfg_res_acl.js` |
+| s5 | `AGENTS.md` + System 1 | not recorded yet | | |
+
+`node tools/demo.mjs trace 1` replays a recording turn by turn.
+`node tools/session-table.mjs --details` prints the table above with every search
+the agent ran.
+
+## System 1: `scenario-5/tools/system1.mjs`
+
+A coding agent spends most of its turns on quick decisions: which file, which
+tool, what kind of request. `system1.mjs` hands those to a decision model,
+[Cloudflare Clef-flash](https://developers.cloudflare.com/workers-ai/models/clef-flash/),
+which answers typed questions with a probability per option in tens of
+milliseconds, and leaves the big model to read and edit.
 
 ```bash
-# Stage the scenario so the results tab shows what is running
-node tools/demo.mjs stage 1
-
-# Run the agent
-cd scenario-1 && opencode
-# paste: Change bhaskar's permission level from "read" to "write" in this project.
-
-# Verify and update the live scoreboard
-node ../tools/demo.mjs verify 1
+node scenario-5/tools/system1.mjs route "How does this app decide what bhaskar is allowed to do?"
+node scenario-5/tools/system1.mjs tools "Why did checkout start failing in production last night?"
+node scenario-5/tools/system1.mjs rank  "where is bhaskar's permission level defined"
 ```
 
-Repeat with scenarios 2 and 4 for the main talk. Scenario 3 is useful as a
-supporting docs-only comparison.
+- `route`: question, change or run? Plus "multi-file?" and "risky?".
+- `tools`: one yes/no question per tool, 14 in one request; prints which tool
+  definitions to load.
+- `rank`: grep gathers candidate files (deterministic), then one choice question
+  picks the file the request is about.
 
-If the live run timing gets risky, fill the scoreboard from the recorded sessions:
+To use the real model, export `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`
+(a Workers AI token). Without them, or if the call fails, the script runs an
+offline keyword stand-in and says so on its first line. `--raw` prints the API
+response, `--json` prints machine-readable output, `SYSTEM1_MODEL` switches model
+(for example `@cf/cloudflare/clef`).
 
-```bash
-node tools/demo.mjs recorded
-```
+The request shape follows Cloudflare's published examples (`state` plus
+`questions` of type `choice` / `noul`). It was tested against a local mock of
+several response shapes, not against the live API, so run one call with `--raw`
+before the session.
 
-The older preview command is still useful during rehearsal:
+## Keep the scenarios clean
 
-```bash
-./test-scenario.sh 1
-./test-scenario.sh 4
-```
-
----
-
-## Key insights
-
-**1. File naming is a search index.**
-`glob **/*permission*` returns the target immediately in scenario 2 and nothing useful in scenario 1.
-Good names aren't just readable — they're machine-searchable.
-
-**2. Multiple plausible candidates each cost a round trip.**
-Decoy files force the agent to read, evaluate, and discard. Four decoys ≈ four extra tool calls.
-The problem isn't that the agent is slow — it's that it has no way to skip steps it doesn't know are wrong.
-
-**3. CLAUDE.md eliminates the discovery phase.**
-The agent doesn't search at all in scenario 3. It reads the map you gave it and goes to work.
-The cost of writing one good CLAUDE.md is paid back on every task the agent ever runs in this repo.
-
-**4. A skill can substitute for a clean codebase.**
-Scenario 4 has the same mess as scenario 1, but the agent achieves scenario 3 efficiency.
-A well-written tool encodes the knowledge a senior engineer would share on day one:
-"don't look at the snapshot or the legacy file — use `cfg_res_acl.js`."
-The skill does the disambiguation so the agent doesn't have to.
-
----
-
-## Project structure
-
-```
-scenario-1/  scenario-4/          ← messy: 4 decoys + cryptic target
-├── config/
-│   ├── access-defaults.js        ← DECOY (provisioning defaults)
-│   └── env-overrides.js          ← DECOY (staging overrides, bhaskar has "write")
-├── utils/
-│   ├── cfg_res_acl.js            ← TARGET (hard to find by name)
-│   ├── permissions-snapshot.js   ← DECOY (cached copy)
-│   └── permissions-legacy.js     ← DECOY (deprecated v1 format)
-└── tools/                        ← scenario-4 only
-    ├── find-permission.js        ← skill: looks up the source of truth for any user
-    └── permission-registry.json  ← registry: records which file is production
-
-scenario-2/  scenario-3/          ← clean: no decoys, semantic target name
-└── utils/
-    └── user-permissions.js       ← TARGET (findable by glob in one step)
-
-scenario-3/  scenario-4/          ← have CLAUDE.md
-└── CLAUDE.md                     ← s3: points to the file  |  s4: documents the tool
-```
+- Recordings live in `recordings/`, not in the scenario folders. A live agent
+  that greps its scenario must never find a previous run's answer.
+- Don't add an `AGENTS.md` or `CLAUDE.md` above the scenario folders. Agents can
+  pick these files up from parent directories too, which would leak hints into
+  every scenario.
+- `node tools/demo.mjs doctor` lists any fixture file that differs from git.

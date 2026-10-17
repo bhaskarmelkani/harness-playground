@@ -1,63 +1,66 @@
 #!/usr/bin/env bash
-# reset.sh — restore all scenarios to their initial state before a demo run.
-# Resets bhaskar's permission level back to "read" in all four scenarios.
+# reset.sh — restore every demo fixture before a run.
+# Puts bhaskar back to "read" in all scenarios and concept playgrounds.
+# config/env-overrides.js is left alone on purpose: its staging "write" is a decoy.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 reset_file() {
   local file="$1"
-  # Replace only bhaskar's level back to "read" in either compact or multiline objects.
+  # Only bhaskar's entry changes, in compact or multiline objects.
+  # Covers level / permission / permissionLevel ("write" -> "read") and the
+  # cryptic concept file's lv ("w" or "write" -> "r").
   python3 -c "
 import re, sys
 path = sys.argv[1]
 text = open(path).read()
-result = re.sub(
-    r'(bhaskar\s*:\s*\{[^}]*?level\s*:\s*)[\"\\']write[\"\\']',
+text = re.sub(
+    r'(bhaskar\s*:\s*\{[^}]*?\b(?:level|permission|permissionLevel)\s*:\s*)[\"\\']write[\"\\']',
     r'\1\"read\"',
     text,
     flags=re.DOTALL,
 )
-open(path,'w').write(result)
+text = re.sub(
+    r'(bhaskar\s*:\s*\{[^}]*?\blv\s*:\s*)[\"\\'](?:w|write)[\"\\']',
+    r'\1\"r\"',
+    text,
+    flags=re.DOTALL,
+)
+open(path, 'w').write(text)
 " "$file"
 }
 
 reset_if_exists() {
-  local file="$1"
-  local label="$2"
-  if [[ -f "$file" ]]; then
-    reset_file "$file"
-    echo "  - $label"
+  local rel="$1"
+  if [[ -f "$SCRIPT_DIR/$rel" ]]; then
+    reset_file "$SCRIPT_DIR/$rel"
+    echo "  - $rel"
   fi
 }
 
 echo "Resetting permission files..."
 
-reset_if_exists "$SCRIPT_DIR/scenario-1/utils/cfg_res_acl.js" "scenario-1/utils/cfg_res_acl.js"
-reset_if_exists "$SCRIPT_DIR/scenario-1/config/access-defaults.js" "scenario-1/config/access-defaults.js"
-reset_if_exists "$SCRIPT_DIR/scenario-1/utils/permissions-snapshot.js" "scenario-1/utils/permissions-snapshot.js"
-reset_if_exists "$SCRIPT_DIR/scenario-1/utils/permissions-legacy.js" "scenario-1/utils/permissions-legacy.js"
+for n in 1 4 5; do
+  reset_if_exists "scenario-$n/utils/cfg_res_acl.js"
+  reset_if_exists "scenario-$n/config/access-defaults.js"
+  reset_if_exists "scenario-$n/utils/permissions-snapshot.js"
+  reset_if_exists "scenario-$n/utils/permissions-legacy.js"
+done
+reset_if_exists "scenario-2/utils/user-permissions.js"
+reset_if_exists "scenario-3/utils/user-permissions.js"
 
-reset_if_exists "$SCRIPT_DIR/scenario-2/utils/user-permissions.js" "scenario-2/utils/user-permissions.js"
-
-reset_if_exists "$SCRIPT_DIR/scenario-3/utils/user-permissions.js" "scenario-3/utils/user-permissions.js"
-
-reset_if_exists "$SCRIPT_DIR/scenario-4/utils/cfg_res_acl.js" "scenario-4/utils/cfg_res_acl.js"
-reset_if_exists "$SCRIPT_DIR/scenario-4/config/access-defaults.js" "scenario-4/config/access-defaults.js"
-reset_if_exists "$SCRIPT_DIR/scenario-4/utils/permissions-snapshot.js" "scenario-4/utils/permissions-snapshot.js"
-reset_if_exists "$SCRIPT_DIR/scenario-4/utils/permissions-legacy.js" "scenario-4/utils/permissions-legacy.js"
+reset_if_exists "concepts/01-explore-loop/users.js"
+reset_if_exists "concepts/02-file-names/bad/utils/u.js"
+reset_if_exists "concepts/02-file-names/good/utils/user-permissions.js"
+reset_if_exists "concepts/03-variable-names/clean/access.js"
+reset_if_exists "concepts/03-variable-names/cryptic/access.js"
+for v in with without; do
+  reset_if_exists "concepts/04-coldstart-doc/$v/utils/acl.js"
+  reset_if_exists "concepts/04-coldstart-doc/$v/utils/cache.js"
+done
 
 echo ""
-echo "All scenarios reset. Run each demo from inside its directory."
-echo "Pin the SAME model every run so only the harness varies:"
-echo ""
-echo "  cd scenario-1 && opencode --model github-copilot/claude-haiku-4.5   # ← must cd in first"
-echo "  cd scenario-2 && opencode --model github-copilot/claude-haiku-4.5"
-echo "  cd scenario-3 && opencode --model github-copilot/claude-haiku-4.5"
-echo "  cd scenario-4 && opencode --model github-copilot/claude-haiku-4.5"
-echo ""
-echo "Verify after each run (updates the live scoreboard):"
-echo "  node tools/demo.mjs verify 1"
-echo "  node tools/demo.mjs verify 2"
-echo "  node tools/demo.mjs verify 3"
-echo "  node tools/demo.mjs verify 4"
+echo "All fixtures reset."
+echo "Anything else an agent changed (new files, other edits) is listed by:"
+echo "  node tools/demo.mjs doctor"

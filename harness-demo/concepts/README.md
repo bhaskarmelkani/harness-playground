@@ -18,7 +18,7 @@ Change bhaskar's permission from "read" to "write".
 ```
 
 > These `concepts/` exercises are for the **teaching** half of the talk (watch the
-> mechanism live). The `scenario-1..4/` app + `tools/session-table.mjs` is the
+> mechanism live). The `scenario-1..5/` app + `tools/session-table.mjs` is the
 > **proof** half (real agent runs, counted). Same lesson, two altitudes.
 
 ---
@@ -62,4 +62,4 @@ It prints, per exercise, the search an agent would naturally run and whether it
 2. `02` then `03` — run `./probe.sh` and let the COLD vs LANDS contrast make the
    "naming matters" point for you.
 3. `04` — show that one doc turns every future COLD start into a LANDS.
-4. Hand off to the `scenario-1..4` app + `session-table.mjs` for the counted proof.
+4. Hand off to the `scenario-1..5` app + `session-table.mjs` for the counted proof.

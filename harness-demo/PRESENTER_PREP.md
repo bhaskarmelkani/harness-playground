@@ -1,114 +1,98 @@
-# Presenter Runbook — The Harness Around the Model
+# Presenter runbook
 
-**Thesis:** The model is fixed. The harness is your leverage. Same prompt, same
-model, same agent every run — only the *repo context* changes, and behaviour,
-speed, and **correctness** change with it.
+Thesis: the model is fixed; the harness around it decides what it finds, how
+fast, and whether it edits the right file.
 
-**The prompt (never changes):**
-```
-Change bhaskar's permission level from "read" to "write" in this project.
-```
+## The day before
 
----
+1. Install the agent you will use and log in. The recordings used opencode
+   with `github-copilot/claude-haiku-4.5`; use the same model for every run.
+2. Optional, for the real System 1 model: create a Workers AI API token in the
+   Cloudflare dashboard and export it in the shell you will present from.
 
-## The one rule that keeps you honest
+   ```bash
+   export CLOUDFLARE_ACCOUNT_ID=...
+   export CLOUDFLARE_API_TOKEN=...
+   node scenario-5/tools/system1.mjs route "test" --raw   # check the response parses
+   ```
 
-The scoreboard's **tool-call counts (9 / 6 / 2 / 3) are the recorded eval.** A live
-`verify` only flips **correctness** (which file actually changed). So don't say
-"watch the count drop live." Say:
+   Without credentials every System 1 command prints "offline stand-in" and uses
+   a keyword heuristic. The demo still works; say so on stage.
+3. Rehearse once end to end with the deck. Then record scenario-5 (see below).
 
-> "The live run proves it lands on the **right file**. The **counts** come from the
-> recorded eval."
-
-## Same model every run
-
-Pin the same fast model on all three live runs so the *only* variable is the
-harness (this is also the model the recording used, so s1 reliably fails):
-
-```
-opencode --model github-copilot/claude-haiku-4.5
-```
-
----
-
-## Setup (once, before the talk)
+## 15 minutes before
 
 ```bash
-cd /Users/bhaskar.melkani/Documents/Projects/bhaskar/harness-playground/harness-demo
-node tools/demo.mjs init      # resets all scenarios to "read"
-node tools/demo.mjs serve     # keep this terminal open
-```
-Open two tabs: `http://localhost:4177/presentation` and `.../results`.
-Deck keys: **→/space** next · **←** back · **N** speaker notes · **F** fullscreen.
-
-Warm-up (optional, slide 5, no model needed):
-```bash
-cd concepts && ./probe.sh     # shows COLD vs LANDS
+cd harness-demo
+node tools/demo.mjs doctor   # fix anything marked FAIL
+node tools/demo.mjs init     # reset fixtures and scoreboard
+node tools/demo.mjs serve    # second terminal tab; leave it running
 ```
 
----
+Screen layout: browser with `http://localhost:4177/presentation` on the left
+half, terminal on the right half. Terminal font 18pt or larger.
 
-## Run loop (do this for s1 → s2 → s4)
+If you use pi or Claude Code instead of opencode, press <kbd>S</kbd> in the deck
+and pick the preset (or type your command), and start the server with
+`HARNESS_AGENT="..." node tools/demo.mjs serve` so the CLI prints the same.
 
-For each scenario N, in a second terminal:
-```bash
-node tools/demo.mjs stage N
-cd scenario-N && opencode --model github-copilot/claude-haiku-4.5
-#   paste the prompt above, let it finish, then Ctrl-C / quit opencode
-node tools/demo.mjs verify N     # flips the live row on the results tab
+## Driving the deck
+
+| Key | Does |
+|-----|------|
+| <kbd>→</kbd> / <kbd>←</kbd> | next / previous slide |
+| <kbd>1</kbd>–<kbd>9</kbd> | copy that command from the tray at the bottom |
+| <kbd>T</kbd> | start or pause the timer; the header pill says if you are behind plan |
+| <kbd>N</kbd> | speaker notes: what to say, what to watch, what to do if it goes wrong |
+| <kbd>P</kbd> | presenter window (notes, timer, next slide), synced with the deck |
+| <kbd>H</kbd> | hide the tray |
+| <kbd>S</kbd> | settings: agent command, demo folder |
+
+Copied shell commands start with `cd "<demo folder>" &&`, so they work from any
+terminal tab. Agent prompts (marked ▸) are copied as plain text to paste into
+the agent. Copied commands get a ✓ so you can see where you are.
+
+## The run loop (every live scenario)
+
+1. `node tools/demo.mjs stage N`: marks it running on the scoreboard.
+2. `cd scenario-N && <agent>`: start the agent.
+3. Paste the prompt. Narrate the tool calls as they appear.
+4. Quit the agent (`/exit` or Ctrl+C).
+5. `node tools/demo.mjs verify N`: checks which file changed.
+
+The tray on each scenario slide has exactly these, in this order.
+
+## If something goes wrong
+
+| Problem | Do this |
+|---------|---------|
+| A live run misbehaves or takes too long | quit it, `node tools/demo.mjs trace N` (s1–s4), move on |
+| s1 picks the right file live | say so: live runs vary, that's why we verify and keep recordings |
+| Scoreboard empty before act 5 | `node tools/demo.mjs recorded` |
+| Files already say "write" | `node tools/demo.mjs init` |
+| Deck can't reach the server | restart `serve`; port busy: `serve --port 4188` |
+
+The last two slides are backups: recovery commands and all recordings on one
+scale.
+
+## Record scenario-5 after rehearsal
+
+There is no recording of s5 yet; the deck shows its expected path as a dashed
+bar. After a good rehearsal run in opencode, export the session as markdown
+(`/export`) and save it as `recordings/session-5.md`. `session-table.mjs` and
+`trace 5` pick it up automatically. To show it in the deck too, add an entry to
+`RECORDED` in `presentation.html` (the numbers come from
+`node tools/session-table.mjs --format json`).
+
+## Numbers to remember
+
 ```
-Then switch to the results tab and point at the row.
-
-| # | Slide | What to watch | The one line to say |
-|---|---|---|---|
-| **s1** | "Maximum ambiguity" | greps, opens 4 decoys, edits **`config/access-defaults.js` — the WRONG file** | "No harness. It's not just slow — it's *wrong*." |
-| **s2** | "One good filename" | `glob **/*permission*` → 1 hit → edit | "Nothing about the model changed. We made the repo searchable." |
-| **s4** | "Same mess + a tool" | reads `CLAUDE.md` → runs `find-permission.js` → edits the right file | "Same messy repo as s1. One doc + one tool. Pure harness." |
-
-> **s3** (CLAUDE.md points straight at the file, 2 calls) is *supporting* material —
-> mention it as the docs-only midpoint; no need to run it live.
-
-**The money slide is s1 vs s4:** identical messy repo; s1 edits the wrong file, s4
-nails it in 3 calls. Don't rush it.
-
----
-
-## If a live run misbehaves
-
-Agents are probabilistic. If **s1 happens to succeed** (a good sign the wrong file
-*looked* plausible but it got lucky), don't fight it — load the controlled result
-and move on:
-```bash
-node tools/demo.mjs recorded     # fills the board from the recorded sessions
-```
-Say: "Live runs vary; the recorded eval is our controlled measurement, and the
-verifier is what we trust." Same fallback if timing gets tight.
-
-Other quick fixes:
-- Results page blank → confirm `serve` is running; refresh.
-- Port busy → `node tools/demo.mjs serve --port 4188` (open `:4188/...`).
-- Scenarios look already-changed → `node tools/demo.mjs init` again.
-
----
-
-## Numbers to memorize
-
-```
-s1: 9 calls, WRONG file   s2: 6, correct   s3: 2, correct   s4: 3, correct (on s1's messy repo)
+s1  9 calls  32.8 s  WRONG file (config/access-defaults.js)
+s2  6 calls  16.9 s  correct
+s3  2 calls  15.6 s  correct
+s4  3 calls  23.8 s  correct, on s1's messy files
+s1: 6 of 9 turns were spent looking for the file
 ```
 
-## Three answers to have ready
-
-- **"Isn't this just prompt engineering?"** No — the prompt is identical every run.
-  We changed the *environment* the agent searches: names, docs, tools. That's
-  context engineering.
-- **"Why not just use a bigger model?"** A bigger model in s1 still faces 4
-  plausible files with no signal for which is production. It guesses better, but it
-  still guesses. The harness removes the guess.
-- **"Scaffold vs harness?"** Scaffold = generic machinery (tool calls, parsing,
-  sandbox). Harness = *this repo's* signals: what's the source of truth, what not
-  to edit, which helper to run.
-
-**Close:** "Stop tuning the model you can't change. Engineer the context you can."
-Piper is where those harness choices live.
-```
+Clef-flash: 9B decision model on Workers AI, released 1 Oct 2026, 38.8 ms
+median (Cloudflare's figure), up to 64 questions per request.
