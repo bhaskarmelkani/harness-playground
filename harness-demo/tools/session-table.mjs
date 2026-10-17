@@ -2,16 +2,20 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const scriptDir = path.dirname(new URL(import.meta.url).pathname);
-const repoRoot = path.resolve(scriptDir, "..", "..");
-const demoRoot = path.join(repoRoot, "harness-demo");
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const demoRoot = path.resolve(scriptDir, "..");
+// Recorded transcripts live outside the scenario folders so a live agent
+// grepping its scenario can never read a previous run's answer.
+const recordingsDir = path.join(demoRoot, "recordings");
 
 const expectedTargets = {
   1: "utils/cfg_res_acl.js",
   2: "utils/user-permissions.js",
   3: "utils/user-permissions.js",
   4: "utils/cfg_res_acl.js",
+  5: "utils/cfg_res_acl.js",
 };
 
 const scenarioNotes = {
@@ -19,6 +23,7 @@ const scenarioNotes = {
   2: "Semantic filename reduces exploration",
   3: "Context file short-circuits discovery",
   4: "Custom tool shortcuts search on messy repo",
+  5: "Fast System 1 model ranks candidates on messy repo",
 };
 
 function parseArgs(argv) {
@@ -71,28 +76,18 @@ Options:
 }
 
 function findSessionFiles() {
-  if (!fs.existsSync(demoRoot)) {
-    console.error(`Could not find harness demo directory: ${demoRoot}`);
+  if (!fs.existsSync(recordingsDir)) {
+    console.error(`Could not find recordings directory: ${recordingsDir}`);
     process.exit(1);
   }
 
-  const dirs = fs
-    .readdirSync(demoRoot, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && /^scenario-\d+$/.test(entry.name))
-    .map((entry) => entry.name)
-    .sort((a, b) => Number(a.split("-")[1]) - Number(b.split("-")[1]));
-
-  return dirs.flatMap((dirName) => {
-    const scenarioDir = path.join(demoRoot, dirName);
-    return fs
-      .readdirSync(scenarioDir, { withFileTypes: true })
-      .filter((entry) => entry.isFile() && /^session-.*\.md$/.test(entry.name))
-      .map((entry) => ({
-        scenario: Number.parseInt(dirName.split("-")[1], 10),
-        scenarioDir,
-        sessionFile: path.join(scenarioDir, entry.name),
-      }));
-  });
+  return fs
+    .readdirSync(recordingsDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /^session-\d+\.md$/.test(entry.name))
+    .map((entry) => ({
+      scenario: Number.parseInt(entry.name.match(/\d+/)[0], 10),
+      sessionFile: path.join(recordingsDir, entry.name),
+    }));
 }
 
 function parseSession(sessionInfo) {
@@ -115,7 +110,8 @@ function parseSession(sessionInfo) {
   }
 
   const counts = countTools(tools);
-  const editedFile = findEditedFile(tools, sessionInfo.scenarioDir);
+  const turns = parseTurns(markdown);
+  const editedFile = findEditedFile(tools);
   const expectedTarget = expectedTargets[sessionInfo.scenario] ?? "";
   const correctTarget = editedFile === expectedTarget;
 
@@ -134,7 +130,51 @@ function parseSession(sessionInfo) {
     notes: buildNotes(sessionInfo.scenario, editedFile, correctTarget),
     sequence: tools.map((item) => item.tool),
     searchish_details: buildSearchishDetails(tools),
+    model: turns[0]?.model ?? "",
+    total_seconds: Number(turns.reduce((sum, turn) => sum + turn.seconds, 0).toFixed(1)),
+    turns,
   };
+}
+
+// One "turn" is one model round trip: the harness sends the whole conversation,
+// the model answers with text and/or tool calls, the harness runs the tools.
+function parseTurns(markdown) {
+  const headerRegex = /^## Assistant \((.+?) · ([\d.]+)s\)\s*$/gm;
+  const headers = [...markdown.matchAll(headerRegex)];
+  return headers.map((header, index) => {
+    const bodyStart = header.index + header[0].length;
+    const bodyEnd = index + 1 < headers.length ? headers[index + 1].index : markdown.length;
+    const body = markdown.slice(bodyStart, bodyEnd);
+    const firstTool = body.indexOf("**Tool:");
+    const text = (firstTool === -1 ? body : body.slice(0, firstTool)).replace(/\n---\s*$/, "").trim();
+    const toolRegex = /\*\*Tool: ([^*]+)\*\*\s+\*\*Input:\*\*\s+```json\s*([\s\S]*?)```(?:\s+\*\*Output:\*\*\s+```[^\n]*\n([\s\S]*?)```)?/g;
+    const tools = [...body.matchAll(toolRegex)].map((match) => {
+      let input = {};
+      try {
+        input = JSON.parse(match[2].trim());
+      } catch {
+        input = { __raw: match[2].trim() };
+      }
+      return {
+        tool: match[1].trim(),
+        summary: summarizeInput(match[1].trim(), input),
+        output: (match[3] ?? "").trim(),
+      };
+    });
+    return {
+      model: header[1].split("·").slice(1).join("·").trim(),
+      seconds: Number(header[2]),
+      text,
+      tools,
+    };
+  });
+}
+
+function summarizeInput(tool, input) {
+  if (input.filePath) return toScenarioPath(input.filePath);
+  if (input.pattern) return input.include ? `${input.pattern}  (in ${input.include})` : input.pattern;
+  if (input.command) return input.command;
+  return JSON.stringify(input);
 }
 
 function countTools(tools) {
@@ -164,18 +204,21 @@ function isSearchLikeBash(input) {
   );
 }
 
-function findEditedFile(tools, scenarioDir) {
+function findEditedFile(tools) {
   const editTool = tools.find((item) => item.tool === "edit" && typeof item.input.filePath === "string");
   if (!editTool) return "";
-  return normalizePath(editTool.input.filePath, scenarioDir);
+  return toScenarioPath(editTool.input.filePath);
 }
 
-function normalizePath(filePath, scenarioDir) {
+// Recordings hold absolute paths from the machine they were made on
+// (/Users/.../scenario-1/config/x.js). Keep only the part inside the scenario
+// so the eval gives the same answer on every checkout.
+function toScenarioPath(filePath) {
   if (!filePath) return "";
-  if (path.isAbsolute(filePath)) {
-    return path.relative(scenarioDir, filePath).replaceAll(path.sep, "/");
-  }
-  return filePath.replaceAll(path.sep, "/");
+  const normalized = filePath.replaceAll("\\", "/");
+  const match = normalized.match(/\/scenario-\d+(?:\/(.*))?$/);
+  if (match) return match[1] ?? ".";
+  return normalized;
 }
 
 function buildNotes(scenario, editedFile, correctTarget) {

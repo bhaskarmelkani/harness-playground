@@ -569,7 +569,7 @@
           <td>
             <div class="bar">
               <div class="bar-fill" style="width:${percent}%"></div>
-              <div class="bar-label">${calls || "-"} calls</div>
+              <div class="bar-label">${calls ? `${calls} calls` : "not recorded"}</div>
             </div>
           </td>
           <td><span class="truth ${escapeHtml(correctClass)}">${escapeHtml(correct)}</span></td>
